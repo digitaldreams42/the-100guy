@@ -9,13 +9,22 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "cloudinary": "^2.5.1",
+    "clsx": "^2.1.1",
+    "firebase": "^11.0.2",
+    "firebase-admin": "^13.0.1",
+    "lucide-react": "^0.468.0",
     "next": "16.0.3",
+    "nodemailer": "^6.10.1",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "recharts": "^2.13.3",
+    "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.16",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

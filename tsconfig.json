@@ -25,10 +25,11 @@
   "include": [
     "next-env.d.ts",
     "**/*.ts",
+    "**/*.js",
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "src/lib/firebase.js", "src/context/StoreContext.js", "src/app/layout.js"  ],
   "exclude": ["node_modules"]
 }
