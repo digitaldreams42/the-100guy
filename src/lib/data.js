@@ -1,116 +1,71 @@
 // lib/data.js
-import { 
-    collection, 
-    addDoc, 
-    updateDoc, 
-    deleteDoc, 
-    serverTimestamp,
-    query,
-    where,
-    doc
-} from 'firebase/firestore';
-import { storage } from './firebase'; // Imports { appId, db, serverTimestamp, ... }
+// This file now acts as a client for the API routes.
 
-const getCollectionRef = (name) => {
-    return collection(storage.db, 'artifacts', storage.appId, 'public', 'data', name);
-};
+// --- Helper for API calls ---
+async function apiCall(method, url, data = null) {
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+    if (data) {
+        options.body = JSON.stringify(data);
+    }
+
+    try {
+        const response = await fetch(url, options);
+        const result = await response.json();
+
+        if (!response.ok) {
+            // Throw an error with the message from the API
+            throw new Error(result.message || `API call failed with status ${response.status}`);
+        }
+        return { success: true, ...result };
+    } catch (error) {
+        console.error(`API ${method} ${url} Error:`, error);
+        return { success: false, message: error.message };
+    }
+}
 
 // --- Product CRUD ---
 
 export async function createProduct(productData) {
-    try {
-        await addDoc(getCollectionRef('products'), {
-            ...productData,
-            createdAt: serverTimestamp(),
-            status: productData.status || 'draft',
-            downloads: 0
-        });
-        return { success: true, message: 'Product created successfully.' };
-    } catch (error) {
-        console.error("Error creating product:", error);
-        return { success: false, message: error.message };
-    }
+    const response = await apiCall('POST', '/api/products', productData);
+    return { ...response, message: response.message || 'Product created successfully.' };
 }
 
 export async function updateProduct(productId, productData) {
-    try {
-        const productRef = doc(storage.db, 'artifacts', storage.appId, 'public', 'data', 'products', productId);
-        await updateDoc(productRef, productData);
-        return { success: true, message: 'Product updated successfully.' };
-    } catch (error) {
-        console.error("Error updating product:", error);
-        return { success: false, message: error.message };
-    }
+    const response = await apiCall('PUT', `/api/products/${productId}`, productData);
+    return { ...response, message: response.message || 'Product updated successfully.' };
 }
 
 export async function deleteProduct(productId) {
-    try {
-        const productRef = doc(storage.db, 'artifacts', storage.appId, 'public', 'data', 'products', productId);
-        await deleteDoc(productRef);
-        return { success: true, message: 'Product deleted successfully.' };
-    } catch (error) {
-        console.error("Error deleting product:", error);
-        return { success: false, message: error.message };
-    }
+    const response = await apiCall('DELETE', `/api/products/${productId}`);
+    return { ...response, message: response.message || 'Product deleted successfully.' };
 }
 
 // --- Sales and Subscribers ---
 
 export async function createSaleRecord(item, customerEmail) {
-    try {
-        await addDoc(getCollectionRef('sales'), {
-            productId: item.id,
-            productTitle: item.title,
-            amount: item.price,
-            customerEmail: customerEmail,
-            date: new Date().toISOString(),
-            status: 'completed',
-            type: item.type,
-            createdAt: serverTimestamp()
-        });
-        return { success: true };
-    } catch (error) {
-        console.error("Error creating sale record:", error);
-        return { success: false };
-    }
+    // This will call the new POST /api/sales route
+    const response = await apiCall('POST', '/api/sales', { item, customerEmail });
+    return { ...response, message: response.message || 'Sale record created successfully.' };
 }
 
 export async function subscribeEmail(email) {
     if (!email || !email.includes('@')) {
         return { success: false, message: 'Invalid email address.' };
     }
-    try {
-        await addDoc(getCollectionRef('subscribers'), {
-            email,
-            date: new Date().toISOString().split('T')[0],
-            status: 'active',
-            tags: ['website_signup'],
-            subscribedAt: serverTimestamp()
-        });
-        return { success: true, message: "You're in! Welcome to the club." };
-    } catch (error) {
-        // Simple duplicate check simulation
-        if (error.code === 'permission-denied') {
-             return { success: false, message: 'You are already subscribed!' };
-        }
-        console.error("Error subscribing:", error);
-        return { success: false, message: 'Error subscribing. Please try again.' };
+    const response = await apiCall('POST', '/api/subscribers', { email });
+    // Handle specific conflict message from API
+    if (!response.success && response.message && response.message.includes('already subscribed')) {
+        response.message = 'You are already subscribed!';
     }
+    return { ...response, message: response.message || "You're in! Welcome to the club." };
 }
 
 export async function deleteSubscriber(subscriberId) {
-    try {
-        const subscriberRef = doc(storage.db, 'artifacts', storage.appId, 'public', 'data', 'subscribers', subscriberId);
-        await deleteDoc(subscriberRef);
-        return { success: true, message: 'Subscriber deleted successfully.' };
-    } catch (error) {
-        console.error("Error deleting subscriber:", error);
-        return { success: false, message: error.message };
-    }
+    const response = await apiCall('DELETE', `/api/subscribers/${subscriberId}`);
+    return { ...response, message: response.message || 'Subscriber deleted successfully.' };
 }
-
-// Data fetching is handled via onSnapshot in Contexts for real-time data. 
-// However, the query builder is useful:
-export const productCollectionQuery = query(getCollectionRef('products'));
-export const salesCollectionQuery = query(getCollectionRef('sales'));
-export const subscriberCollectionQuery = query(getCollectionRef('subscribers'));
