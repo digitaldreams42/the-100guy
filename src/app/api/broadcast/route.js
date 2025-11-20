@@ -1,17 +1,21 @@
 // app/api/broadcast/route.js
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import { db } from '../../../lib/firebase'; // We need the admin instance to fetch data server-side
-import { collection, getDocs } from 'firebase/firestore';
+import { adminDb } from '../../../lib/firebase-admin'; // Use the server-side admin instance
 
-// Helper to get all subscribers from Firestore
+// Helper to get all subscribers from Firestore using Admin SDK
 async function getAllSubscribers() {
-    const subscribersCollection = collection(db, 'artifacts', process.env.NEXT_PUBLIC_FIREBASE_APP_ID, 'public', 'data', 'subscribers');
-    const snapshot = await getDocs(subscribersCollection);
+    // Note: Ensure your environment variables are available in your deployment environment.
+    const collectionPath = `artifacts/${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}/public/data/subscribers`;
+    const subscribersCollectionRef = adminDb.collection(collectionPath);
+    
+    const snapshot = await subscribersCollectionRef.get();
+    
     if (snapshot.empty) {
-        console.log('No subscribers found.');
+        console.log('No subscribers found in database.');
         return [];
     }
+    
     return snapshot.docs.map(doc => doc.data().email);
 }
 
