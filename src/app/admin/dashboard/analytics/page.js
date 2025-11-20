@@ -95,7 +95,7 @@ export default function AdminAnalyticsPage() {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {sales.map((sale) => (
                             <tr key={sale.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sale.createdAt?.toDate()).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sale.createdAt).toLocaleDateString()}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.productTitle}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${sale.amount?.toFixed(2)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.customerEmail}</td>
@@ -130,7 +130,7 @@ export default function AdminAnalyticsPage() {
                         {subscribers.map((sub) => (
                             <tr key={sub.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sub.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sub.subscribedAt?.toDate()).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sub.subscribedAt).toLocaleDateString()}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{sub.status}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button 
