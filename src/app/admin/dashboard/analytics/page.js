@@ -42,8 +42,8 @@ export default function AdminAnalyticsPage() {
             const values = headers.map(header => {
                 const cleanHeader = header.toLowerCase();
                 let value = row[cleanHeader];
-                if (cleanHeader === 'date' || cleanHeader === 'subscribedat') {
-                    value = new Date(row[cleanHeader]?.toDate()).toLocaleDateString();
+                if (cleanHeader === 'date' || cleanHeader === 'subscribedat' || cleanHeader === 'createdat') { // Added createdat for sales
+                    value = new Date(row[cleanHeader]).toLocaleDateString();
                 }
                 const escaped = (''+(value || '')).replace(/"/g, '"');
                 return `"${escaped}"`;
