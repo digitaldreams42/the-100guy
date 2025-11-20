@@ -23,7 +23,7 @@ const initialFormState = {
 export default function ProductForm({ product, onSave, onCancel }) {
     const [formData, setFormData] = useState(initialFormState);
     const [loading, setLoading] = useState(false);
-    const { showNotification } = useStore();
+    const { showNotification, refetchProducts } = useStore();
 
     useEffect(() => {
         if (product) {
@@ -65,11 +65,11 @@ export default function ProductForm({ product, onSave, onCancel }) {
             ...formData,
             price: parseFloat(formData.price),
             features: formData.features.filter(f => f.trim() !== ''),
-            // Clean up unnecessary fields if they exist from the Firestore document structure
-            id: undefined, 
-            createdAt: undefined,
-            downloads: undefined
         };
+        // Do not send id or other read-only fields back to the API for update/create
+        delete dataToSave.id;
+        delete dataToSave.createdAt;
+        delete dataToSave.downloads;
         
         const result = product?.id 
             ? await updateProduct(product.id, dataToSave)
@@ -79,6 +79,7 @@ export default function ProductForm({ product, onSave, onCancel }) {
         showNotification(result.message, result.success ? 'success' : 'error');
         
         if (result.success) {
+            await refetchProducts(); // Re-fetch products to update the list
             onSave();
         }
     };

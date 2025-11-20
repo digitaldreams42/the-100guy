@@ -1,16 +1,9 @@
 // context/StoreContext.jsx
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { onSnapshot } from 'firebase/firestore';
-import { 
-    subscribeEmail, 
-    createSaleRecord, 
-    productCollectionQuery,
-    salesCollectionQuery,
-    subscriberCollectionQuery
-} from '../lib/data';
-import { MOCK_PRODUCTS, PRODUCT_TYPES } from '../lib/constants';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { subscribeEmail, createSaleRecord } from '../lib/data';
+import { PRODUCT_TYPES } from '../lib/constants';
 import { useAuth } from './AuthContext';
 
 const StoreContext = createContext();
@@ -18,13 +11,14 @@ const StoreContext = createContext();
 export const useStore = () => useContext(StoreContext);
 
 export function StoreProvider({ children }) {
-    const { user, isLoading: isAuthLoading } = useAuth();
+    const { user, isLoading: isAuthLoading, isUserAdmin } = useAuth();
     
     // UI State
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [notification, setNotification] = useState(null); // { type: 'success'|'error', message: '' }
+    const [notification, setNotification] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     
     // Core Data State
     const [products, setProducts] = useState([]);
@@ -36,8 +30,63 @@ export function StoreProvider({ children }) {
     const [activeFilter, setActiveFilter] = useState(PRODUCT_TYPES.ALL);
     const [searchQuery, setSearchQuery] = useState('');
 
-    // --- Actions ---
+    // --- Data Fetching Actions ---
+    const fetchProducts = useCallback(async () => {
+        try {
+            const response = await fetch('/api/products');
+            const data = await response.json();
+            if (response.ok) {
+                setProducts(data);
+            } else {
+                throw new Error(data.message || 'Failed to fetch products');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification(error.message, 'error');
+        }
+    }, []);
 
+    const fetchAdminData = useCallback(async () => {
+        setIsLoadingData(true);
+        try {
+            const [salesRes, subscribersRes] = await Promise.all([
+                fetch('/api/sales'),
+                fetch('/api/subscribers')
+            ]);
+            const salesData = await salesRes.json();
+            const subscribersData = await subscribersRes.json();
+
+            if (salesRes.ok) setSales(salesData);
+            else throw new Error(salesData.message || 'Failed to fetch sales');
+            
+            if (subscribersRes.ok) setSubscribers(subscribersData);
+            else throw new Error(subscribersData.message || 'Failed to fetch subscribers');
+
+        } catch (error) {
+            console.error(error);
+            showNotification(error.message, 'error');
+        } finally {
+            setIsLoadingData(false);
+        }
+    }, []);
+
+    // --- Initial Data Load ---
+    useEffect(() => {
+        if (!isAuthLoading) {
+            fetchProducts();
+            if (isUserAdmin) {
+                fetchAdminData();
+            } else {
+                // If user is not admin, clear any potential stale admin data
+                setSales([]);
+                setSubscribers([]);
+                setIsLoadingData(false);
+            }
+        }
+    }, [isAuthLoading, isUserAdmin, fetchProducts, fetchAdminData]);
+
+
+    // --- Other Actions ---
     const showNotification = (message, type = 'success') => {
         setNotification({ message, type });
         setTimeout(() => setNotification(null), 3000);
@@ -62,13 +111,7 @@ export function StoreProvider({ children }) {
         
         setIsProcessing(true);
         try {
-            // Simulate Payment Processing delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // In a real app, customer email would come from payment gateway/user profile
-            const customerEmail = user.isAnonymous ? 'anonymous@example.com' : user.email || 'customer@example.com'; 
-
-            // Create Sale Records in batch
+            const customerEmail = user.isMock ? 'admin@example.com' : user.email || 'customer@example.com';
             const batchPromises = cart.map(item => createSaleRecord(item, customerEmail));
             const results = await Promise.all(batchPromises);
 
@@ -76,13 +119,14 @@ export function StoreProvider({ children }) {
                 setCart([]);
                 setIsCartOpen(false);
                 showNotification('Payment successful! Check your email.');
+                if(isUserAdmin) fetchAdminData(); // Refresh sales data after successful payment
             } else {
-                showNotification('Payment processed but failed to record all sales.', 'error');
+                throw new Error('Payment processed but failed to record all sales.');
             }
 
         } catch (error) {
             console.error("Payment failed:", error);
-            showNotification('Payment processing failed.', 'error');
+            showNotification(error.message, 'error');
         } finally {
             setIsProcessing(false);
         }
@@ -91,38 +135,12 @@ export function StoreProvider({ children }) {
     const handleSubscribe = async (email) => {
         const result = await subscribeEmail(email);
         showNotification(result.message, result.success ? 'success' : 'error');
+        if (result.success && isUserAdmin) {
+            fetchAdminData(); // Refresh subscriber data
+        }
     };
-
-    // --- Effects: Firestore Listeners ---
-
-    // Products Listener
-    useEffect(() => {
-        if (isAuthLoading || !user) return; 
-
-        const unsubscribe = onSnapshot(productCollectionQuery, (snapshot) => {
-            const loadedProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setProducts(loadedProducts);
-        }, (error) => console.error("Error fetching products", error));
-        
-        return () => unsubscribe();
-    }, [user, isAuthLoading]);
-
-    // Admin Data Listeners (Sales & Subscribers)
-    useEffect(() => {
-        if (isAuthLoading || !user) return; 
-
-        const unsubSales = onSnapshot(salesCollectionQuery, (snap) => {
-            setSales(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        });
-
-        const unsubSub = onSnapshot(subscriberCollectionQuery, (snap) => {
-            setSubscribers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-        });
-
-        return () => { unsubSales(); unsubSub(); };
-    }, [user, isAuthLoading]);
     
-    // Filtered Products Memo
+    // --- Memoized Values ---
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
             const matchesType = activeFilter === PRODUCT_TYPES.ALL || p.type === activeFilter;
@@ -138,6 +156,7 @@ export function StoreProvider({ children }) {
         selectedProduct, setSelectedProduct,
         notification,
         isProcessing,
+        isLoadingData,
 
         // Data
         products,
@@ -155,7 +174,9 @@ export function StoreProvider({ children }) {
         removeFromCart,
         processPayment,
         handleSubscribe,
-        showNotification
+        showNotification,
+        refetchAdminData: fetchAdminData, // Expose refetch functions
+        refetchProducts: fetchProducts
     };
 
     return (

@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../../../../context/StoreContext';
-import { Download, Users, Trash2, Send } from 'lucide-react';
+import { Users, Trash2, Send } from 'lucide-react';
 import Button from '../../../../components/ui/Button';
 import { deleteSubscriber } from '../../../../lib/data';
 
@@ -92,7 +92,7 @@ const BroadcastForm = ({ showNotification }) => {
     );
 };
 
-const SubscribersTable = ({ subscribers, showNotification }) => {
+const SubscribersTable = ({ subscribers, showNotification, refetchAdminData }) => {
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDeleteSubscriber = async (subscriberId, email) => {
@@ -103,6 +103,9 @@ const SubscribersTable = ({ subscribers, showNotification }) => {
         const result = await deleteSubscriber(subscriberId);
         setIsDeleting(false);
         showNotification(result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+            await refetchAdminData();
+        }
     };
 
     return (
@@ -144,12 +147,16 @@ const SubscribersTable = ({ subscribers, showNotification }) => {
 };
 
 export default function AdminSubscribersPage() {
-    const { subscribers, showNotification } = useStore();
+    const { subscribers, showNotification, refetchAdminData } = useStore();
 
     return (
         <div className="space-y-8">
             <BroadcastForm showNotification={showNotification} />
-            <SubscribersTable subscribers={subscribers} showNotification={showNotification} />
+            <SubscribersTable 
+                subscribers={subscribers} 
+                showNotification={showNotification}
+                refetchAdminData={refetchAdminData}
+            />
         </div>
     );
 }

@@ -11,7 +11,7 @@ import { deleteProduct } from '../../../../lib/data';
 import Modal from '../../../../components/ui/Modal'; // Import the new Modal
 
 export default function AdminProductsPage() {
-    const { products, showNotification } = useStore();
+    const { products, showNotification, refetchProducts } = useStore();
     const [editingProduct, setEditingProduct] = useState(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -36,6 +36,9 @@ export default function AdminProductsPage() {
         setIsDeleting(false);
 
         showNotification(result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+            await refetchProducts();
+        }
     };
 
     const handleFormSave = () => {
