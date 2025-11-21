@@ -1,7 +1,7 @@
 // app/api/verify_session/route.js
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { adminDb } from '../../../../lib/firebase-admin'; // Import adminDb
+import { adminDb } from '../../../lib/firebase-admin'; // Import adminDb
 import admin from 'firebase-admin'; // Import admin for FieldValue
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
