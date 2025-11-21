@@ -1,11 +1,12 @@
 // app/success/page.js
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react'; // Import Suspense
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, Download, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Button from '../../components/ui/Button';
+import { useStore } from '../../context/StoreContext'; // Import useStore
 
 // New component to encapsulate client-side logic using useSearchParams
 function SuccessContent() {
@@ -14,6 +15,8 @@ function SuccessContent() {
     const [lineItems, setLineItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [salesStatusMessage, setSalesStatusMessage] = useState(''); // New state for message
+    const { refetchProducts, refetchAdminData } = useStore(); // Use store functions
 
     useEffect(() => {
         if (sessionId) {
@@ -23,6 +26,14 @@ function SuccessContent() {
                     const data = await response.json();
                     if (response.ok) {
                         setLineItems(data.line_items);
+                        // Check if new sales were recorded
+                        if (data.newSalesRecorded && data.newSalesRecorded.length > 0) {
+                            setSalesStatusMessage('Your purchase was recorded. Thank you!');
+                            refetchProducts(); // Update product data (e.g., salesCount)
+                            refetchAdminData(); // Update admin dashboard sales
+                        } else {
+                            setSalesStatusMessage('Your purchase details have been retrieved.');
+                        }
                     } else {
                         throw new Error(data.message || 'Failed to verify session.');
                     }
@@ -37,7 +48,7 @@ function SuccessContent() {
             setLoading(false);
             setError('No session ID found.');
         }
-    }, [sessionId]);
+    }, [sessionId, refetchProducts, refetchAdminData]); // Add refetch functions to dependencies
 
     return (
         <div className="bg-white p-10 rounded-2xl shadow-lg max-w-2xl w-full text-center">
@@ -55,7 +66,8 @@ function SuccessContent() {
                 <div>
                     <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">Payment Successful!</h1>
-                    <p className="text-gray-600 mb-8">Thank you for your purchase. You can download your items below.</p>
+                    <p className="text-gray-600 mb-2">{salesStatusMessage}</p> {/* Display sales status */}
+                    <p className="text-gray-600 mb-8">You can download your items below.</p>
                     
                     <div className="space-y-4 text-left">
                         {lineItems.map(item => (
