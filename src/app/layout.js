@@ -9,7 +9,7 @@ import ProductModal from '../components/modals/ProductModal';
 import Notification from '../components/Notification';
 import Head from 'next/head';
 import { useStore } from '../context/StoreContext';
-import { usePathname } from 'next/navigation'; // Import usePathname
+import { usePathname } from 'next/navigation';
 import { ShoppingCart } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
@@ -17,14 +17,14 @@ import Link from 'next/link';
 
 // Simple Navbar component for the main layout
 const NavbarComponent = () => {
-    const pathname = usePathname(); // Use hook directly here
+    const pathname = usePathname();
     const { setIsCartOpen, cart } = useStore();
     const { isUserAdmin } = useAuth();
 
     const NavButton = ({ href, children }) => {
         const isActive = pathname === href;
         return (
-            <Link href={href} passHref>
+            <Link href={href}>
                 <span className={`text-sm font-medium hover:text-yellow-500 cursor-pointer ${isActive ? 'text-yellow-500' : 'text-gray-600'}`}>{children}</span>
             </Link>
         );
@@ -34,7 +34,7 @@ const NavbarComponent = () => {
         <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    <Link href="/" passHref>
+                    <Link href="/">
                         <div className="flex items-center cursor-pointer">
                             <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center mr-2">
                                 <span className="font-black text-lg">G</span>
@@ -65,7 +65,7 @@ const NavbarComponent = () => {
                             )}
                         </button>
                         {isUserAdmin && (
-                            <Link href="/admin/dashboard" passHref>
+                            <Link href="/admin/dashboard">
                                 <span className="text-xs font-bold text-gray-400 hover:text-gray-900 uppercase tracking-wider cursor-pointer">
                                     Admin
                                 </span>
@@ -107,7 +107,7 @@ export default function RootLayout({ children }) {
 
 // Client wrapper component to access contexts
 function LayoutContent({ children }) {
-    const pathname = usePathname(); // Correct way to get pathname
+    const pathname = usePathname();
     const isAdminPage = pathname.startsWith('/admin');
 
     return (

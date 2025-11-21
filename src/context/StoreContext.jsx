@@ -144,7 +144,13 @@ export function StoreProvider({ children }) {
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
             const matchesType = activeFilter === PRODUCT_TYPES.ALL || p.type === activeFilter;
-            const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.description.toLowerCase().includes(searchQuery.toLowerCase());
+            
+            const searchStr = searchQuery.toLowerCase();
+            const nameMatch = p.name ? p.name.toLowerCase().includes(searchStr) : false;
+            const descriptionMatch = p.description ? p.description.toLowerCase().includes(searchStr) : false;
+            
+            const matchesSearch = nameMatch || descriptionMatch;
+
             return matchesType && matchesSearch;
         });
     }, [products, activeFilter, searchQuery]);
