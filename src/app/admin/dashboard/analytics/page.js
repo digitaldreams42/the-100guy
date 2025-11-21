@@ -3,9 +3,10 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../../../../context/StoreContext';
-import { Download, Users, Package, DollarSign, Trash2, Loader2 } from 'lucide-react';
+import { Users, Package, DollarSign, Trash2, Loader2 } from 'lucide-react';
 import Button from '../../../../components/ui/Button';
 import { deleteSubscriber } from '../../../../lib/data';
+import ConfirmationModal from '../../../../components/modals/ConfirmationModal';
 
 // Helper function to format date
 const formatDate = (dateString) => {
@@ -13,7 +14,6 @@ const formatDate = (dateString) => {
     
     const date = new Date(dateString);
 
-    // Check if date is valid
     if (isNaN(date.getTime())) {
         return 'Invalid Date';
     }
@@ -24,12 +24,13 @@ const formatDate = (dateString) => {
 export default function AdminAnalyticsPage() {
     const { sales, subscribers, analytics, isLoadingData, showNotification, refetchAdminData } = useStore();
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
 
     // --- Calculations ---
-    // Use analytics data from the store, with fallback to 0 if not loaded yet
     const totalRevenue = analytics?.totalRevenue || 0;
     const totalSales = analytics?.totalSalesCount || 0;
-    const totalSubscribers = subscribers.length; // Still calculated from subscribers array
+    const totalSubscribers = subscribers.length;
     const averageSaleValue = totalSales > 0 ? totalRevenue / totalSales : 0;
 
     const stats = [
@@ -40,74 +41,30 @@ export default function AdminAnalyticsPage() {
     ];
     
     // --- Handlers ---
-    const handleDeleteSubscriber = async (subscriberId, email) => {
-        if (!window.confirm(`Are you sure you want to delete subscriber: ${email}? This action cannot be undone.`)) {
-            return;
-        }
+    const openConfirmation = (item) => {
+        setItemToDelete(item);
+        setIsConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
+
         setIsDeleting(true);
-        const result = await deleteSubscriber(subscriberId);
+        const result = await deleteSubscriber(itemToDelete.id);
         setIsDeleting(false);
+        setIsConfirmOpen(false);
+        setItemToDelete(null);
+
         showNotification(result.message, result.success ? 'success' : 'error');
         if (result.success) {
-            refetchAdminData(); // Refresh data after deletion
+            refetchAdminData();
         }
-    };
-
-    // --- CSV Export Functions ---
-    const generateCSV = (headers, data, filename) => {
-        const csvRows = [];
-        // Add header row
-        csvRows.push(headers.join(','));
-
-        // Add data rows
-        for (const row of data) {
-            const values = headers.map(headerKey => {
-                const cleanHeaderKey = headerKey.toLowerCase(); // Use this for accessing row properties
-                let value;
-
-                if (cleanHeaderKey === 'createdat' || cleanHeaderKey === 'subscribedat') {
-                    value = formatDate(row[headerKey]); // Use original headerKey for row access
-                } else if (cleanHeaderKey === 'productprice') {
-                    value = (row[headerKey] || 0).toFixed(2); // Use original headerKey for row access
-                } else {
-                    value = row[headerKey]; // Use original headerKey for row access
-                }
-                
-                // Escape double quotes and wrap in double quotes for CSV
-                const escaped = ('' + (value || '')).replace(/"/g, '""');
-                return `"${escaped}"`;
-            });
-            csvRows.push(values.join(','));
-        }
-        
-        const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.setAttribute('hidden', '');
-        a.setAttribute('href', url);
-        a.setAttribute('download', filename);
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    };
-
-    const exportSalesToCSV = () => {
-        const headers = ['id', 'productName', 'productPrice', 'customerEmail', 'createdAt']; // Updated headers
-        generateCSV(headers, sales, 'sales-export.csv'); // sales data directly matches
-    };
-
-    const exportSubscribersToCSV = () => {
-        const headers = ['email', 'subscribedAt', 'status'];
-        generateCSV(headers, subscribers, 'subscribers-export.csv');
     };
 
     // --- Components ---
     const SalesTable = () => (
         <div id="sales" className="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Sales History ({sales.length})</h2>
-                <Button onClick={exportSalesToCSV} variant="ghost" icon={Download} className="text-sm">Export CSV</Button>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Sales History ({sales.length})</h2>
             
             {sales.length === 0 ? (
                  <p className="text-gray-500">No sales recorded.</p>
@@ -138,10 +95,7 @@ export default function AdminAnalyticsPage() {
 
     const SubscribersTable = () => (
         <div id="subscribers" className="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-900">Subscribers ({subscribers.length})</h2>
-                <Button onClick={exportSubscribersToCSV} variant="ghost" icon={Download} className="text-sm">Export CSV</Button>
-            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Subscribers ({subscribers.length})</h2>
             
             {subscribers.length === 0 ? (
                  <p className="text-gray-500">No subscribers yet.</p>
@@ -151,7 +105,6 @@ export default function AdminAnalyticsPage() {
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Subscribed</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
                     </thead>
@@ -160,10 +113,9 @@ export default function AdminAnalyticsPage() {
                             <tr key={sub.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sub.email}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(sub.subscribedAt)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{sub.status}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button 
-                                        onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                                        onClick={() => openConfirmation(sub)}
                                         className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
                                         disabled={isDeleting}
                                     >
@@ -180,6 +132,15 @@ export default function AdminAnalyticsPage() {
 
     return (
         <div className="space-y-8">
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Confirm Deletion"
+                message={`Are you sure you want to delete ${itemToDelete?.email}? This action cannot be undone.`}
+                isLoading={isDeleting}
+            />
+
             {isLoadingData ? (
                 <div className="flex justify-center items-center h-48">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />

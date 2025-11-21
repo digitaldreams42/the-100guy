@@ -3,9 +3,10 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../../../../context/StoreContext';
-import { Users, Trash2, Send } from 'lucide-react';
+import { Users, Trash2, Send, Loader2 } from 'lucide-react'; // Import Loader2
 import Button from '../../../../components/ui/Button';
 import { deleteSubscriber } from '../../../../lib/data';
+import ConfirmationModal from '../../../../components/modals/ConfirmationModal'; // Import ConfirmationModal
 
 // --- Components ---
 
@@ -92,22 +93,7 @@ const BroadcastForm = ({ showNotification }) => {
     );
 };
 
-const SubscribersTable = ({ subscribers, showNotification, refetchAdminData }) => {
-    const [isDeleting, setIsDeleting] = useState(false);
-
-    const handleDeleteSubscriber = async (subscriberId, email) => {
-        if (!window.confirm(`Are you sure you want to delete subscriber: ${email}? This action cannot be undone.`)) {
-            return;
-        }
-        setIsDeleting(true);
-        const result = await deleteSubscriber(subscriberId);
-        setIsDeleting(false);
-        showNotification(result.message, result.success ? 'success' : 'error');
-        if (result.success) {
-            await refetchAdminData();
-        }
-    };
-
+const SubscribersTable = ({ subscribers, openConfirmation, isDeleting }) => {
     return (
         <div id="subscribers" className="bg-white p-6 rounded-xl shadow-md overflow-x-auto">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Subscribers ({subscribers.length})</h2>
@@ -132,7 +118,7 @@ const SubscribersTable = ({ subscribers, showNotification, refetchAdminData }) =
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button 
-                                        onClick={() => handleDeleteSubscriber(sub.id, sub.email)}
+                                        onClick={() => openConfirmation(sub)}
                                         className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors"
                                         disabled={isDeleting}
                                     >
@@ -149,16 +135,56 @@ const SubscribersTable = ({ subscribers, showNotification, refetchAdminData }) =
 };
 
 export default function AdminSubscribersPage() {
-    const { subscribers, showNotification, refetchAdminData } = useStore();
+    const { subscribers, showNotification, refetchAdminData, isLoadingData } = useStore(); // Access isLoadingData
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState(null);
+
+    const openConfirmation = (item) => {
+        setItemToDelete(item);
+        setIsConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!itemToDelete) return;
+
+        setIsDeleting(true);
+        const result = await deleteSubscriber(itemToDelete.id);
+        setIsDeleting(false);
+        setIsConfirmOpen(false);
+        setItemToDelete(null);
+
+        showNotification(result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+            await refetchAdminData();
+        }
+    };
 
     return (
         <div className="space-y-8">
-            <BroadcastForm showNotification={showNotification} />
-            <SubscribersTable 
-                subscribers={subscribers} 
-                showNotification={showNotification}
-                refetchAdminData={refetchAdminData}
+             <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Confirm Deletion"
+                message={`Are you sure you want to delete subscriber ${itemToDelete?.email}? This action cannot be undone.`}
+                isLoading={isDeleting}
             />
+            {isLoadingData ? ( // Conditional render for loading state
+                <div className="flex justify-center items-center h-48">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <p className="ml-2 text-gray-600">Loading subscribers data...</p>
+                </div>
+            ) : (
+                <>
+                    <BroadcastForm showNotification={showNotification} />
+                    <SubscribersTable 
+                        subscribers={subscribers} 
+                        openConfirmation={openConfirmation}
+                        isDeleting={isDeleting}
+                    />
+                </>
+            )}
         </div>
     );
 }
