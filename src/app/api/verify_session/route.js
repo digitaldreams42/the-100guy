@@ -1,8 +1,8 @@
 // app/api/verify_session/route.js
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { adminDb } from '../../../lib/firebase-admin'; // Import adminDb
-import admin from 'firebase-admin'; // Import admin for FieldValue
+import { adminDb } from '../../../lib/firebase-admin'; // Corrected Path
+import admin from 'firebase-admin';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -19,7 +19,6 @@ export async function GET(request) {
             expand: ['line_items.data.price.product'],
         });
 
-        // Ensure the session was successful
         if (session.payment_status !== 'paid') {
             return NextResponse.json({ message: 'Payment not successful for this session.' }, { status: 400 });
         }
@@ -33,10 +32,9 @@ export async function GET(request) {
 
             if (!productId || !productFile) {
                 console.warn(`Missing product metadata for item: ${item.id}`);
-                continue; // Skip if essential metadata is missing
+                continue;
             }
 
-            // Check if sale already exists to prevent duplicates on refresh
             const salesCollectionRef = adminDb.collection(`artifacts/${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}/public/data/sales`);
             const existingSaleQuery = await salesCollectionRef
                 .where('sessionId', '==', sessionId)
@@ -45,12 +43,12 @@ export async function GET(request) {
                 .get();
 
             if (existingSaleQuery.empty) {
-                // Sale does not exist, create it
+                // 1. Create the sale record
                 const saleRecord = {
                     productId: productId,
                     productName: item.price.product.name,
                     productFile: productFile,
-                    productPrice: item.amount_total / 100, // Amount is in cents
+                    productPrice: item.amount_total / 100,
                     customerEmail: customerEmail,
                     sessionId: sessionId,
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -58,11 +56,18 @@ export async function GET(request) {
                 await salesCollectionRef.add(saleRecord);
                 newSalesRecorded.push(productId);
 
-                // Increment salesCount for the product
+                // 2. Increment salesCount for the specific product
                 const productDocRef = adminDb.doc(`artifacts/${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}/public/data/products/${productId}`);
                 await productDocRef.update({
                     salesCount: admin.firestore.FieldValue.increment(1),
                 });
+                
+                // 3. Update aggregate analytics
+                const analyticsDocRef = adminDb.doc(`artifacts/${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}/public/data/analytics/summary`);
+                await analyticsDocRef.set({
+                    totalRevenue: admin.firestore.FieldValue.increment(item.amount_total / 100),
+                    totalSalesCount: admin.firestore.FieldValue.increment(1),
+                }, { merge: true }); // Use merge to create if it doesn't exist
             }
         }
 

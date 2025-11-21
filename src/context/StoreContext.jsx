@@ -25,6 +25,7 @@ export function StoreProvider({ children }) {
     const [cart, setCart] = useState([]);
     const [sales, setSales] = useState([]);
     const [subscribers, setSubscribers] = useState([]);
+    const [analytics, setAnalytics] = useState(null); // New analytics state
     
     // Filter State
     const [activeFilter, setActiveFilter] = useState(PRODUCT_TYPES.ALL);
@@ -46,21 +47,41 @@ export function StoreProvider({ children }) {
         }
     }, []);
 
+    const fetchAnalytics = useCallback(async () => {
+        try {
+            const response = await fetch('/api/analytics');
+            const data = await response.json();
+            if (response.ok) {
+                setAnalytics(data);
+            } else {
+                throw new Error(data.message || 'Failed to fetch analytics');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification(error.message, 'error');
+        }
+    }, []);
+
     const fetchAdminData = useCallback(async () => {
         setIsLoadingData(true);
         try {
-            const [salesRes, subscribersRes] = await Promise.all([
+            const [salesRes, subscribersRes, analyticsRes] = await Promise.all([ // Added analyticsRes
                 fetch('/api/sales'),
-                fetch('/api/subscribers')
+                fetch('/api/subscribers'),
+                fetch('/api/analytics') // Fetch analytics data
             ]);
             const salesData = await salesRes.json();
             const subscribersData = await subscribersRes.json();
+            const analyticsData = await analyticsRes.json(); // Get analytics data
 
             if (salesRes.ok) setSales(salesData);
             else throw new Error(salesData.message || 'Failed to fetch sales');
             
             if (subscribersRes.ok) setSubscribers(subscribersData);
             else throw new Error(subscribersData.message || 'Failed to fetch subscribers');
+
+            if (analyticsRes.ok) setAnalytics(analyticsData); // Set analytics data
+            else throw new Error(analyticsData.message || 'Failed to fetch analytics');
 
         } catch (error) {
             console.error(error);
@@ -80,6 +101,7 @@ export function StoreProvider({ children }) {
                 // If user is not admin, clear any potential stale admin data
                 setSales([]);
                 setSubscribers([]);
+                setAnalytics(null); // Clear analytics data
                 setIsLoadingData(false);
             }
         }
@@ -169,6 +191,7 @@ export function StoreProvider({ children }) {
         cart,
         sales,
         subscribers,
+        analytics, // Expose analytics data
         
         // Filter
         activeFilter, setActiveFilter,
@@ -182,7 +205,8 @@ export function StoreProvider({ children }) {
         handleSubscribe,
         showNotification,
         refetchAdminData: fetchAdminData, // Expose refetch functions
-        refetchProducts: fetchProducts
+        refetchProducts: fetchProducts,
+        refetchAnalytics: fetchAnalytics // Expose refetchAnalytics
     };
 
     return (
