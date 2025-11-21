@@ -104,7 +104,7 @@ export default function AdminAnalyticsPage() {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {sales.map((sale) => (
                             <tr key={sale.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.createdAt?.toDate ? new Date(sale.createdAt.toDate()).toLocaleDateString() : 'N/A'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'N/A'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.productName}</td> {/* Changed to productName */}
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${(sale.productPrice || 0).toFixed(2)}</td> {/* Changed to productPrice, added fallback */}
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.customerEmail}</td>
@@ -139,7 +139,7 @@ export default function AdminAnalyticsPage() {
                         {subscribers.map((sub) => (
                             <tr key={sub.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sub.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sub.subscribedAt?.toDate ? new Date(sub.subscribedAt.toDate()).toLocaleDateString() : 'N/A'}</td> {/* Corrected date formatting */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sub.subscribedAt ? new Date(sub.subscribedAt).toLocaleDateString() : 'N/A'}</td> {/* Corrected date formatting */}
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{sub.status}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button 
