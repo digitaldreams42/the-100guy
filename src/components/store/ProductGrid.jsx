@@ -5,6 +5,7 @@ import React from 'react';
 import { Package, Users, ArrowRight, Check, Star, ChevronRight } from 'lucide-react';
 import Badge from '../ui/Badge';
 import { useStore } from '../../context/StoreContext';
+import Image from 'next/image'; // Import Next.js Image component
 
 export default function ProductGrid({ items }) {
     const { setSelectedProduct } = useStore();
@@ -27,22 +28,34 @@ export default function ProductGrid({ items }) {
                     onClick={() => setSelectedProduct(product)} 
                     className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden border border-gray-100 flex flex-col"
                 >
-                    <div className={`h-48 bg-gradient-to-br ${product.coverColor} p-6 flex flex-col justify-between relative overflow-hidden`}>
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10 transition-transform group-hover:scale-110"></div>
-                        <div className="flex justify-between items-start z-10">
-                            <Badge type={product.type}>{product.type}</Badge>
-                            {product.status === 'coming-soon' && <Badge type="coming-soon">Coming Soon</Badge>}
-                        </div>
-                        <div className="z-10">
-                            <div className="bg-white/20 backdrop-blur-md w-12 h-12 rounded-lg flex items-center justify-center text-white mb-2">
-                                {product.type === 'Book' ? <ArrowRight size={24} /> : product.type === 'Course' ? <Users size={24} /> : <Package size={24} />}
+                    <div className="relative h-48 overflow-hidden">
+                        {product.coverImage ? (
+                            <Image
+                                src={product.coverImage}
+                                alt={product.name}
+                                layout="fill"
+                                objectFit="cover"
+                                className="transition-transform group-hover:scale-105"
+                            />
+                        ) : (
+                            <div className={`h-full w-full bg-gradient-to-br ${product.coverColor} flex items-center justify-center text-white text-lg font-bold`}>
+                                No Image
                             </div>
+                        )}
+                        <div className="absolute top-4 left-4 z-10">
+                            <Badge type={product.type}>{product.type}</Badge>
                         </div>
+                        {product.status === 'coming-soon' && (
+                            <div className="absolute top-4 right-4 z-10">
+                                <Badge type="coming-soon">Coming Soon</Badge>
+                            </div>
+                        )}
                     </div>
                     
                     <div className="p-6 flex-1 flex flex-col">
                         <div className="flex-1">
-                            <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-yellow-500 transition-colors">{product.title}</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-1 group-hover:text-yellow-500 transition-colors">{product.name}</h3>
+                            <p className="text-sm text-gray-500 mb-2">{product.category}</p> {/* Display Category */}
                             <p className="text-sm text-gray-500 mb-4">{product.subtitle}</p>
                             
                             <div className="space-y-2 mb-6">

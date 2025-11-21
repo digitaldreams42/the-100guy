@@ -5,11 +5,15 @@
 async function apiCall(method, url, data = null) {
     const options = {
         method,
-        headers: {
-            'Content-Type': 'application/json',
-        },
     };
-    if (data) {
+
+    if (data instanceof FormData) {
+        // If data is FormData, browser will set Content-Type header automatically
+        options.body = data;
+    } else if (data) {
+        options.headers = {
+            'Content-Type': 'application/json',
+        };
         options.body = JSON.stringify(data);
     }
 
