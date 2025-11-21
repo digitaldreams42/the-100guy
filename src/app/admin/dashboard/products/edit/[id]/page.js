@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { AlertCircle, Save, Image, File, Loader2, X, Plus } from 'lucide-react';
-import Button from '../../../../../components/ui/Button';
+import Button from '../../../../../../components/ui/Button';
 
 export default function EditProduct({ params }) {
     const { id } = params;

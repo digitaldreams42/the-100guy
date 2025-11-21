@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Upload, AlertCircle, Save, Image, File, Plus, X, Loader2 } from 'lucide-react';
-import Button from '../../../../components/ui/Button';
+import Button from '../../../../../components/ui/Button';
 
 export default function NewProduct() {
     const [productData, setProductData] = useState({

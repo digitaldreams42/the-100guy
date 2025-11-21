@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Save, AlertCircle } from 'lucide-react';
-import Button from '../../../../components/ui/Button';
+import Button from '../../../../../../components/ui/Button';
 import Link from 'next/link';
 
 export default function EditBlogPost({ params }) {

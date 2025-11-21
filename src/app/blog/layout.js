@@ -1,5 +1,5 @@
 // app/blog/layout.js
-import { StoreProvider } from '../../src/context/StoreContext';
+import { StoreProvider } from '../../context/StoreContext';
 
 export default function BlogLayout({ children }) {
     return (
