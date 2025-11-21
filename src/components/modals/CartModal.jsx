@@ -1,18 +1,43 @@
 // components/modals/CartModal.jsx
 'use client';
 
-import React from 'react';
-import { X, ShoppingCart, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ShoppingCart, Trash2, Loader2 } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import { useStore } from '../../context/StoreContext';
+import Image from 'next/image';
 
 export default function CartModal() {
-    const { isCartOpen, setIsCartOpen, cart, removeFromCart, processPayment, isProcessing } = useStore();
+    const { isCartOpen, setIsCartOpen, cart, removeFromCart, showNotification } = useStore();
+    const [isProcessing, setIsProcessing] = useState(false);
 
     if (!isCartOpen) return null;
 
     const total = cart.reduce((sum, item) => sum + parseFloat(item.price || 0), 0);
+
+    const handleCheckout = async () => {
+        setIsProcessing(true);
+        try {
+            const response = await fetch('/api/checkout_sessions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cart }),
+            });
+
+            const { url, message } = await response.json();
+
+            if (response.ok) {
+                window.location.href = url;
+            } else {
+                throw new Error(message || 'Failed to create checkout session.');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification(error.message, 'error');
+            setIsProcessing(false);
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm">
@@ -37,9 +62,18 @@ export default function CartModal() {
                         <div className="space-y-4">
                             {cart.map((item) => (
                                 <div key={item.id} className="flex gap-4 bg-gray-50 p-4 rounded-xl">
-                                    <div className={`w-16 h-16 rounded-lg bg-gradient-to-br ${item.coverColor} flex-shrink-0`}></div>
+                                    <div className="w-16 h-16 rounded-lg relative overflow-hidden flex-shrink-0">
+                                        {item.coverImage && (
+                                            <Image 
+                                                src={item.coverImage}
+                                                alt={item.name}
+                                                layout="fill"
+                                                objectFit="cover"
+                                            />
+                                        )}
+                                    </div>
                                     <div className="flex-1">
-                                        <h4 className="font-bold text-gray-900 line-clamp-1">{item.title}</h4>
+                                        <h4 className="font-bold text-gray-900 line-clamp-1">{item.name}</h4>
                                         <Badge type={item.type}>{item.type}</Badge>
                                         <div className="mt-1 font-medium text-gray-900">${item.price?.toFixed(2)}</div>
                                     </div>
@@ -58,12 +92,13 @@ export default function CartModal() {
                             <span className="text-gray-500">Subtotal</span>
                             <span className="text-2xl font-black text-gray-900">${total.toFixed(2)}</span>
                         </div>
-                        <p className="text-xs text-gray-400 mb-4 text-center">Secured by Stripe/Flutterwave</p>
+                        <p className="text-xs text-gray-400 mb-4 text-center">Secured by Stripe</p>
                         <Button 
-                            onClick={processPayment} 
+                            onClick={handleCheckout} 
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white hover:shadow-blue-200"
                             loading={isProcessing}
                             disabled={isProcessing}
+                            icon={isProcessing ? Loader2 : null}
                         >
                             {isProcessing ? 'Processing...' : 'Checkout Now'}
                         </Button>
