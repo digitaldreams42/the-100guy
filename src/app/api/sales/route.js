@@ -16,7 +16,19 @@ export async function GET() {
         if (snapshot.empty) {
             return NextResponse.json([], { status: 200 });
         }
-        const sales = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const sales = snapshot.docs.map(doc => {
+            const data = doc.data();
+            // Convert Firestore Timestamps to ISO strings
+            const processedData = Object.entries(data).reduce((acc, [key, value]) => {
+                if (value && typeof value.toDate === 'function') { // Check if it's a Firestore Timestamp
+                    acc[key] = value.toDate().toISOString();
+                } else {
+                    acc[key] = value;
+                }
+                return acc;
+            }, {});
+            return { id: doc.id, ...processedData };
+        });
         return NextResponse.json(sales, { status: 200 });
     } catch (error) {
         console.error('API GET Sales Error:', error);

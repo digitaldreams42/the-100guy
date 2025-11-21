@@ -18,11 +18,16 @@ export async function GET() {
         }
         const subscribers = snapshot.docs.map(doc => {
             const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                subscribedAt: data.subscribedAt.toDate().toISOString(),
-            };
+            // Convert Firestore Timestamps to ISO strings for all date fields
+            const processedData = Object.entries(data).reduce((acc, [key, value]) => {
+                if (value && typeof value.toDate === 'function') { // Check if it's a Firestore Timestamp
+                    acc[key] = value.toDate().toISOString();
+                } else {
+                    acc[key] = value;
+                }
+                return acc;
+            }, {});
+            return { id: doc.id, ...processedData };
         });
         return NextResponse.json(subscribers, { status: 200 });
     } catch (error) {

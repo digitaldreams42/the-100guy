@@ -7,6 +7,20 @@ import { Download, Users, Package, DollarSign, Trash2, Loader2 } from 'lucide-re
 import Button from '../../../../components/ui/Button';
 import { deleteSubscriber } from '../../../../lib/data';
 
+// Helper function to format date
+const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+    }
+    return date.toLocaleDateString();
+};
+
+
 export default function AdminAnalyticsPage() {
     const { sales, subscribers, analytics, isLoadingData, showNotification, refetchAdminData } = useStore();
     const [isDeleting, setIsDeleting] = useState(false);
@@ -41,20 +55,26 @@ export default function AdminAnalyticsPage() {
 
     // --- CSV Export Functions ---
     const generateCSV = (headers, data, filename) => {
-        const csvRows = [headers.join(',')];
+        const csvRows = [];
+        // Add header row
+        csvRows.push(headers.join(','));
+
+        // Add data rows
         for (const row of data) {
-            const values = headers.map(header => {
-                const cleanHeader = header.toLowerCase();
+            const values = headers.map(headerKey => {
+                const cleanHeaderKey = headerKey.toLowerCase(); // Use this for accessing row properties
                 let value;
-                if (cleanHeader === 'createdat' || cleanHeader === 'subscribedat') {
-                    value = row[cleanHeader]?.toDate ? new Date(row[cleanHeader].toDate()).toLocaleDateString() : 'N/A';
-                } else if (cleanHeader === 'productprice') {
-                    value = (row[cleanHeader] || 0).toFixed(2);
+
+                if (cleanHeaderKey === 'createdat' || cleanHeaderKey === 'subscribedat') {
+                    value = formatDate(row[headerKey]); // Use original headerKey for row access
+                } else if (cleanHeaderKey === 'productprice') {
+                    value = (row[headerKey] || 0).toFixed(2); // Use original headerKey for row access
+                } else {
+                    value = row[headerKey]; // Use original headerKey for row access
                 }
-                else {
-                    value = row[cleanHeader];
-                }
-                const escaped = (''+(value || '')).replace(/"/g, '"');
+                
+                // Escape double quotes and wrap in double quotes for CSV
+                const escaped = ('' + (value || '')).replace(/"/g, '""');
                 return `"${escaped}"`;
             });
             csvRows.push(values.join(','));
@@ -97,16 +117,16 @@ export default function AdminAnalyticsPage() {
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th> {/* Changed to Revenue */}
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {sales.map((sale) => (
                             <tr key={sale.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'N/A'}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.productName}</td> {/* Changed to productName */}
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${(sale.productPrice || 0).toFixed(2)}</td> {/* Changed to productPrice, added fallback */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(sale.createdAt)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.productName}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${(sale.productPrice || 0).toFixed(2)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.customerEmail}</td>
                             </tr>
                         ))}
@@ -139,7 +159,7 @@ export default function AdminAnalyticsPage() {
                         {subscribers.map((sub) => (
                             <tr key={sub.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sub.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sub.subscribedAt ? new Date(sub.subscribedAt).toLocaleDateString() : 'N/A'}</td> {/* Corrected date formatting */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(sub.subscribedAt)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{sub.status}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button 
