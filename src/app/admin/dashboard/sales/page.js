@@ -59,10 +59,10 @@ export default function AdminSalesPage() {
                             <tr key={sale.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.productName}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.customerEmail}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${sale.productPrice?.toFixed(2)}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${sale.productPrice?.toFixed(2)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(sale.productPrice || 0).toFixed(2)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(sale.productPrice || 0).toFixed(2)}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {sale.createdAt?.toDate ? new Date(sale.createdAt.toDate()).toLocaleDateString() : 'N/A'}
+                                    {sale.createdAt?.toDate ? sale.createdAt.toDate().toLocaleDateString() : 'N/A'}
                                 </td>
                             </tr>
                         ))}

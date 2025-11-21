@@ -16,11 +16,15 @@ export default function AdminDashboardHome() {
     const totalProducts = products.length;
     const activeSubscribers = subscribers.length;
 
+    // Calculate Avg. Sale Value
+    const avgSaleValue = totalSales > 0 ? totalRevenue / totalSales : 0;
+
     const stats = [
         { title: "Total Revenue", value: `$${totalRevenue.toFixed(2)}`, icon: DollarSign, color: "bg-green-100 text-green-600" },
         { title: "Total Sales", value: totalSales, icon: Package, color: "bg-blue-100 text-blue-600" },
         { title: "Total Products", value: totalProducts, icon: Package, color: "bg-yellow-100 text-yellow-600" },
         { title: "Subscribers", value: activeSubscribers, icon: Users, color: "bg-purple-100 text-purple-600" },
+        { title: "Avg. Sale Value", value: `$${avgSaleValue.toFixed(2)}`, icon: BarChart3, color: "bg-indigo-100 text-indigo-600" }, // Added Avg. Sale Value
     ];
 
     const RecentSales = () => (
@@ -29,13 +33,13 @@ export default function AdminDashboardHome() {
             <ul className="space-y-3">
                 {sales.slice(0, 5).map(sale => (
                     <li key={sale.id} className="flex justify-between items-center text-sm border-b pb-2 last:border-b-0">
-                        <span className="font-medium text-gray-700">{sale.productName}</span> {/* Use productName */}
-                        <span className="font-bold text-green-600">${sale.productPrice?.toFixed(2)}</span> {/* Use productPrice */}
+                        <span className="font-medium text-gray-700">{sale.productName}</span>
+                        <span className="font-bold text-green-600">${(sale.productPrice || 0).toFixed(2)}</span>
                     </li>
                 ))}
             </ul>
             {sales.length > 5 && (
-                 <Link href="/admin/dashboard/sales" passHref> {/* Changed to /sales */}
+                 <Link href="/admin/dashboard/sales" passHref>
                     <div className="mt-4 text-sm text-yellow-600 font-bold flex items-center hover:underline cursor-pointer">
                         View All Sales <ArrowRight size={16} className="ml-1" />
                     </div>
@@ -47,7 +51,7 @@ export default function AdminDashboardHome() {
 
     return (
         <div className="space-y-8">
-            {isLoadingData ? ( // Show loading state for entire dashboard
+            {isLoadingData ? (
                 <div className="flex justify-center items-center h-48">
                     <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
                     <p className="ml-2 text-gray-600">Loading dashboard data...</p>
@@ -82,7 +86,7 @@ export default function AdminDashboardHome() {
                                         Add New Product
                                     </Button>
                                 </Link>
-                                <Link href="/admin/dashboard/sales" passHref> {/* Changed to /sales */}
+                                <Link href="/admin/dashboard/sales" passHref>
                                     <Button variant="outline" className="w-full justify-start border-gray-300">
                                         Full Sales Report
                                     </Button>

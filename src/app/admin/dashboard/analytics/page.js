@@ -3,18 +3,19 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../../../../context/StoreContext';
-import { Download, Users, Package, DollarSign, Trash2 } from 'lucide-react';
+import { Download, Users, Package, DollarSign, Trash2, Loader2 } from 'lucide-react';
 import Button from '../../../../components/ui/Button';
 import { deleteSubscriber } from '../../../../lib/data';
 
 export default function AdminAnalyticsPage() {
-    const { sales, subscribers, showNotification } = useStore();
+    const { sales, subscribers, analytics, isLoadingData, showNotification, refetchAdminData } = useStore();
     const [isDeleting, setIsDeleting] = useState(false);
 
     // --- Calculations ---
-    const totalRevenue = sales.reduce((sum, s) => sum + (s.amount || 0), 0);
-    const totalSales = sales.length;
-    const totalSubscribers = subscribers.length;
+    // Use analytics data from the store, with fallback to 0 if not loaded yet
+    const totalRevenue = analytics?.totalRevenue || 0;
+    const totalSales = analytics?.totalSalesCount || 0;
+    const totalSubscribers = subscribers.length; // Still calculated from subscribers array
     const averageSaleValue = totalSales > 0 ? totalRevenue / totalSales : 0;
 
     const stats = [
@@ -33,6 +34,9 @@ export default function AdminAnalyticsPage() {
         const result = await deleteSubscriber(subscriberId);
         setIsDeleting(false);
         showNotification(result.message, result.success ? 'success' : 'error');
+        if (result.success) {
+            refetchAdminData(); // Refresh data after deletion
+        }
     };
 
     // --- CSV Export Functions ---
@@ -41,9 +45,14 @@ export default function AdminAnalyticsPage() {
         for (const row of data) {
             const values = headers.map(header => {
                 const cleanHeader = header.toLowerCase();
-                let value = row[cleanHeader];
-                if (cleanHeader === 'date' || cleanHeader === 'subscribedat' || cleanHeader === 'createdat') { // Added createdat for sales
-                    value = new Date(row[cleanHeader]).toLocaleDateString();
+                let value;
+                if (cleanHeader === 'createdat' || cleanHeader === 'subscribedat') {
+                    value = row[cleanHeader]?.toDate ? new Date(row[cleanHeader].toDate()).toLocaleDateString() : 'N/A';
+                } else if (cleanHeader === 'productprice') {
+                    value = (row[cleanHeader] || 0).toFixed(2);
+                }
+                else {
+                    value = row[cleanHeader];
                 }
                 const escaped = (''+(value || '')).replace(/"/g, '"');
                 return `"${escaped}"`;
@@ -63,8 +72,8 @@ export default function AdminAnalyticsPage() {
     };
 
     const exportSalesToCSV = () => {
-        const headers = ['id', 'productTitle', 'amount', 'customerEmail', 'createdAt'];
-        generateCSV(headers, sales.map(s=>({...s, date: s.createdAt})), 'sales-export.csv');
+        const headers = ['id', 'productName', 'productPrice', 'customerEmail', 'createdAt']; // Updated headers
+        generateCSV(headers, sales, 'sales-export.csv'); // sales data directly matches
     };
 
     const exportSubscribersToCSV = () => {
@@ -88,16 +97,16 @@ export default function AdminAnalyticsPage() {
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th> {/* Changed to Revenue */}
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                         {sales.map((sale) => (
                             <tr key={sale.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sale.createdAt).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.productTitle}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${sale.amount?.toFixed(2)}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.createdAt?.toDate ? new Date(sale.createdAt.toDate()).toLocaleDateString() : 'N/A'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sale.productName}</td> {/* Changed to productName */}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">${(sale.productPrice || 0).toFixed(2)}</td> {/* Changed to productPrice, added fallback */}
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sale.customerEmail}</td>
                             </tr>
                         ))}
@@ -130,7 +139,7 @@ export default function AdminAnalyticsPage() {
                         {subscribers.map((sub) => (
                             <tr key={sub.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sub.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sub.subscribedAt).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{sub.subscribedAt?.toDate ? new Date(sub.subscribedAt.toDate()).toLocaleDateString() : 'N/A'}</td> {/* Corrected date formatting */}
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">{sub.status}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button 
@@ -151,21 +160,30 @@ export default function AdminAnalyticsPage() {
 
     return (
         <div className="space-y-8">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((stat, index) => (
-                    <div key={index} className="bg-white p-6 rounded-xl shadow-md">
-                        <div className="flex items-center">
-                            <stat.icon size={24} className="text-gray-400" />
-                            <p className="text-sm font-medium text-gray-500 ml-3">{stat.title}</p>
-                        </div>
-                        <p className="mt-4 text-3xl font-black text-gray-900">{stat.value}</p>
+            {isLoadingData ? (
+                <div className="flex justify-center items-center h-48">
+                    <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                    <p className="ml-2 text-gray-600">Loading analytics data...</p>
+                </div>
+            ) : (
+                <>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {stats.map((stat, index) => (
+                            <div key={index} className="bg-white p-6 rounded-xl shadow-md">
+                                <div className="flex items-center">
+                                    <stat.icon size={24} className="text-gray-400" />
+                                    <p className="text-sm font-medium text-gray-500 ml-3">{stat.title}</p>
+                                </div>
+                                <p className="mt-4 text-3xl font-black text-gray-900">{stat.value}</p>
+                            </div>
+                        ))}
                     </div>
-                ))}
-            </div>
 
-            <SalesTable />
-            <SubscribersTable />
+                    <SalesTable />
+                    <SubscribersTable />
+                </>
+            )}
         </div>
     );
 }
