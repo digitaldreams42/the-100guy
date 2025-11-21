@@ -7,19 +7,18 @@ import { StoreProvider } from '../context/StoreContext';
 import CartModal from '../components/modals/CartModal';
 import ProductModal from '../components/modals/ProductModal';
 import Notification from '../components/Notification';
-import Head from 'next/head'; // Using Head to inject Tailwind
+import Head from 'next/head';
 import { useStore } from '../context/StoreContext';
-import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation'; // Import usePathname
 import { ShoppingCart } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
 
 // Simple Navbar component for the main layout
-const NavbarComponent = ({ pathname }) => {
-    // Re-implemented simple Navbar here as it's part of the layout.
-    // In a real Next.js app, this would be in components/Navbar.jsx
-    const { isCartOpen, setIsCartOpen, cart } = useStore();
+const NavbarComponent = () => {
+    const pathname = usePathname(); // Use hook directly here
+    const { setIsCartOpen, cart } = useStore();
     const { isUserAdmin } = useAuth();
 
     const NavButton = ({ href, children }) => {
@@ -108,17 +107,12 @@ export default function RootLayout({ children }) {
 
 // Client wrapper component to access contexts
 function LayoutContent({ children }) {
-    const [pathname, setPathname] = useState('');
-
-    useEffect(() => {
-        setPathname(window.location.pathname);
-    }, []);
-
+    const pathname = usePathname(); // Correct way to get pathname
     const isAdminPage = pathname.startsWith('/admin');
 
     return (
         <div className="min-h-screen">
-            {!isAdminPage && <NavbarComponent pathname={pathname} />}
+            {!isAdminPage && <NavbarComponent />}
             {children}
             <ProductModal />
             <CartModal />
@@ -134,7 +128,7 @@ const Footer = () => {
         <footer className="bg-gray-900 text-white py-12 border-t border-gray-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
               <div className="mb-8 md:mb-0">
-                <span className="font-black text-xl block mb-2">GEORGE K. JACKSON</span>
+                <span className="font-black text-xl block mb-2">GEORGE K.</span>
                 <p className="text-gray-500 text-sm">© 2025 The $100 Guy. All rights reserved.</p>
               </div>
               <div className="flex space-x-6">
