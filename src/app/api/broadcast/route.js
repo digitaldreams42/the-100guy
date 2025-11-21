@@ -29,12 +29,10 @@ export async function POST(request) {
 
         // 1. Configure Nodemailer transporter
         const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+            service: 'gmail',
             auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
+                user: process.env.EMAIL,
+                pass: process.env.EMAIL_PASS,
             },
         });
 
@@ -51,7 +49,7 @@ export async function POST(request) {
         // In a real large-scale app, this should be a background job.
         // For now, we send it directly. BCC is used to protect subscriber privacy.
         const mailOptions = {
-            from: process.env.EMAIL_FROM,
+            from: process.env.EMAIL,
             bcc: subscribers, // Send to all subscribers via BCC
             subject: subject,
             html: htmlContent,

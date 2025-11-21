@@ -127,7 +127,9 @@ const SubscribersTable = ({ subscribers, showNotification, refetchAdminData }) =
                         {subscribers.map((sub) => (
                             <tr key={sub.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sub.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(sub.subscribedAt).toLocaleDateString()}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {sub.subscribedAt ? new Date(sub.subscribedAt).toLocaleDateString() : 'N/A'}
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button 
                                         onClick={() => handleDeleteSubscriber(sub.id, sub.email)}

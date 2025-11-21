@@ -16,7 +16,14 @@ export async function GET() {
         if (snapshot.empty) {
             return NextResponse.json([], { status: 200 });
         }
-        const subscribers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const subscribers = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                subscribedAt: data.subscribedAt.toDate().toISOString(),
+            };
+        });
         return NextResponse.json(subscribers, { status: 200 });
     } catch (error) {
         console.error('API GET Subscribers Error:', error);
