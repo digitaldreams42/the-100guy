@@ -12,21 +12,23 @@ export const useStore = () => useContext(StoreContext);
 
 export function StoreProvider({ children }) {
     const { user, isLoading: isAuthLoading, isUserAdmin } = useAuth();
-    
+
     // UI State
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [notification, setNotification] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isLoadingData, setIsLoadingData] = useState(true);
-    
+
     // Core Data State
     const [products, setProducts] = useState([]);
     const [cart, setCart] = useState([]);
+    const [wishlist, setWishlist] = useState([]); // User wishlist
     const [sales, setSales] = useState([]);
+    const [userOrders, setUserOrders] = useState([]); // User-specific orders
     const [subscribers, setSubscribers] = useState([]);
     const [analytics, setAnalytics] = useState(null); // New analytics state
-    
+
     // Filter State
     const [activeFilter, setActiveFilter] = useState(PRODUCT_TYPES.ALL);
     const [searchQuery, setSearchQuery] = useState('');
@@ -46,6 +48,114 @@ export function StoreProvider({ children }) {
             showNotification(error.message, 'error');
         }
     }, []);
+
+    const fetchUserOrders = useCallback(async () => {
+        if (!user || user.isMock) return; // Don't fetch user orders if user is mock admin
+
+        try {
+            const response = await fetch(`/api/sales?customerEmail=${encodeURIComponent(user.email)}`);
+            const data = await response.json();
+            if (response.ok) {
+                setUserOrders(data);
+            } else {
+                throw new Error(data.message || 'Failed to fetch user orders');
+            }
+        } catch (error) {
+            console.error(error);
+            showNotification(error.message, 'error');
+        }
+    }, [user]);
+
+    const fetchWishlist = useCallback(async () => {
+        if (!user || user.isMock) return; // Don't fetch wishlist if user is mock admin
+
+        try {
+            const response = await fetch(`/api/wishlist?userId=${encodeURIComponent(user.uid)}`);
+            const data = await response.json();
+            if (response.ok) {
+                setWishlist(data);
+            } else {
+                // If the endpoint doesn't exist yet, initialize with empty array
+                setWishlist([]);
+            }
+        } catch (error) {
+            console.error(error);
+            // On error, initialize with empty array
+            setWishlist([]);
+        }
+    }, [user]);
+
+    const addToWishlist = async (product) => {
+        if (!user || user.isMock) {
+            showNotification('Please log in to add items to your wishlist', 'error');
+            return;
+        }
+
+        // Check if product is already in wishlist
+        if (wishlist.find(item => item.id === product.id)) {
+            showNotification('Item already in wishlist', 'error');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/wishlist', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: user.uid,
+                    productId: product.id,
+                    productData: {
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        coverImage: product.coverImage,
+                        type: product.type
+                    }
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                setWishlist([...wishlist, product]);
+                showNotification('Added to wishlist!');
+            } else {
+                throw new Error(result.message || 'Failed to add to wishlist');
+            }
+        } catch (error) {
+            console.error('Add to wishlist error:', error);
+            showNotification(error.message, 'error');
+        }
+    };
+
+    const removeFromWishlist = async (productId) => {
+        if (!user || user.isMock) return;
+
+        try {
+            const response = await fetch(`/api/wishlist/${productId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    userId: user.uid
+                }),
+            });
+
+            if (response.ok) {
+                setWishlist(wishlist.filter(item => item.id !== productId));
+                showNotification('Removed from wishlist');
+            } else {
+                const result = await response.json();
+                throw new Error(result.message || 'Failed to remove from wishlist');
+            }
+        } catch (error) {
+            console.error('Remove from wishlist error:', error);
+            showNotification(error.message, 'error');
+        }
+    };
 
     const fetchAnalytics = useCallback(async () => {
         try {
@@ -76,7 +186,7 @@ export function StoreProvider({ children }) {
 
             if (salesRes.ok) setSales(salesData);
             else throw new Error(salesData.message || 'Failed to fetch sales');
-            
+
             if (subscribersRes.ok) setSubscribers(subscribersData);
             else throw new Error(subscribersData.message || 'Failed to fetch subscribers');
 
@@ -97,15 +207,20 @@ export function StoreProvider({ children }) {
             fetchProducts();
             if (isUserAdmin) {
                 fetchAdminData();
+            } else if (user && !user.isMock) {
+                fetchUserOrders(); // Fetch user-specific orders
+                fetchWishlist(); // Fetch user wishlist
             } else {
-                // If user is not admin, clear any potential stale admin data
+                // If user is not admin and not logged in, clear any potential stale data
                 setSales([]);
                 setSubscribers([]);
-                setAnalytics(null); // Clear analytics data
+                setAnalytics(null);
+                setUserOrders([]);
+                setWishlist([]);
                 setIsLoadingData(false);
             }
         }
-    }, [isAuthLoading, isUserAdmin, fetchProducts, fetchAdminData]);
+    }, [isAuthLoading, isUserAdmin, user, fetchProducts, fetchAdminData, fetchUserOrders, fetchWishlist]);
 
 
     // --- Other Actions ---
@@ -130,7 +245,7 @@ export function StoreProvider({ children }) {
 
     const processPayment = async () => {
         if (!user || cart.length === 0) return;
-        
+
         setIsProcessing(true);
         try {
             const customerEmail = user.isMock ? 'admin@example.com' : user.email || 'customer@example.com';
@@ -141,6 +256,12 @@ export function StoreProvider({ children }) {
                 setCart([]);
                 setIsCartOpen(false);
                 showNotification('Payment successful! Check your email.');
+
+                // Refresh user orders after successful payment
+                if (user && !user.isMock) {
+                    await fetchUserOrders();
+                }
+
                 if(isUserAdmin) fetchAdminData(); // Refresh sales data after successful payment
             } else {
                 throw new Error('Payment processed but failed to record all sales.');
@@ -161,16 +282,16 @@ export function StoreProvider({ children }) {
             fetchAdminData(); // Refresh subscriber data
         }
     };
-    
+
     // --- Memoized Values ---
     const filteredProducts = useMemo(() => {
         return products.filter(p => {
             const matchesType = activeFilter === PRODUCT_TYPES.ALL || p.type === activeFilter;
-            
+
             const searchStr = searchQuery.toLowerCase();
             const nameMatch = p.name ? p.name.toLowerCase().includes(searchStr) : false;
             const descriptionMatch = p.description ? p.description.toLowerCase().includes(searchStr) : false;
-            
+
             const matchesSearch = nameMatch || descriptionMatch;
 
             return matchesType && matchesSearch;
@@ -189,10 +310,12 @@ export function StoreProvider({ children }) {
         // Data
         products,
         cart,
+        wishlist, // Expose wishlist
         sales,
+        userOrders, // Expose user orders
         subscribers,
         analytics, // Expose analytics data
-        
+
         // Filter
         activeFilter, setActiveFilter,
         searchQuery, setSearchQuery,
@@ -201,11 +324,15 @@ export function StoreProvider({ children }) {
         // Actions
         addToCart,
         removeFromCart,
+        addToWishlist, // Expose wishlist functions
+        removeFromWishlist,
         processPayment,
         handleSubscribe,
         showNotification,
         refetchAdminData: fetchAdminData, // Expose refetch functions
         refetchProducts: fetchProducts,
+        refetchUserOrders: fetchUserOrders, // Expose refetch user orders function
+        refetchWishlist: fetchWishlist, // Expose refetch wishlist function
         refetchAnalytics: fetchAnalytics // Expose refetchAnalytics
     };
 

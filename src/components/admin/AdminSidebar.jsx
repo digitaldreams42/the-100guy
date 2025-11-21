@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { LayoutDashboard, Package, BarChart3, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, BarChart3, Users, LogOut, MessageSquare, Image } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePathname } from 'next/navigation';
 import Button from '../ui/Button';
@@ -11,8 +11,11 @@ import Button from '../ui/Button';
 const navItems = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Products', href: '/admin/dashboard/products', icon: Package },
+    { name: 'Blog', href: '/admin/dashboard/blog', icon: MessageSquare },
+    { name: 'Media', href: '/admin/dashboard/media', icon: Image },
     { name: 'Subscribers', href: '/admin/dashboard/subscribers', icon: Users },
     { name: 'Analytics', href: '/admin/dashboard/analytics', icon: BarChart3 },
+    { name: 'Settings', href: '/admin/settings', icon: LayoutDashboard },
 ];
 
 export default function AdminSidebar() {

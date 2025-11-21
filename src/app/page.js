@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Hero from '../components/store/Hero';
 import ProductGrid from '../components/store/ProductGrid';
 import Button from '../components/ui/Button';
-import { Package, Users, Download, ArrowRight, Bell } from 'lucide-react';
+import { Package, Users, Download, ArrowRight, Bell, Star, Sparkles, Target, Zap, Award } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { PRODUCT_TYPES } from '../lib/constants';
 
@@ -24,8 +24,8 @@ export default function HomePage() {
     return (
         <div className="min-h-screen bg-gray-50">
             <Hero />
-            
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-20 mb-20">
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-10 mb-20">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {[PRODUCT_TYPES.BOOK, PRODUCT_TYPES.COURSE, PRODUCT_TYPES.TEMPLATE].map(type => (
                         <div key={type} className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:-translate-y-1 transition-transform duration-300">
@@ -35,7 +35,7 @@ export default function HomePage() {
                             <h3 className="text-xl font-bold text-gray-900 mb-2">{type}s</h3>
                             <p className="text-gray-500 mb-4">Premium {type.toLowerCase()}s to accelerate your growth.</p>
                             <Link href="/store" passHref>
-                                <button 
+                                <button
                                     onClick={() => setActiveFilter(type)}
                                     className="text-yellow-600 font-bold flex items-center text-sm hover:underline"
                                 >
@@ -50,8 +50,8 @@ export default function HomePage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-20">
                 <div className="flex justify-between items-end mb-8">
                     <div>
-                        <h2 className="text-3xl font-black text-gray-900 mb-2">Featured Products</h2>
-                        <p className="text-gray-500">Hand-picked for you.</p>
+                        <h2 className="text-3xl font-black text-gray-900 mb-2">Products</h2>
+                        <p className="text-gray-500">Hand-picked by George himself.</p>
                     </div>
                     <Link href="/store" passHref>
                         <Button variant="ghost">
@@ -90,16 +90,16 @@ export default function HomePage() {
                         <Bell size={32} />
                     </div>
                     <h2 className="text-3xl md:text-4xl font-black text-black mb-4">Join {subscribers.length > 100 ? subscribers.length : '1,200+'} Wealth Builders</h2>
-                    <p className="text-black/80 font-medium mb-8 text-lg">Get free tips, early access to drops, and exclusive discounts.</p>
-                    
-                    <form 
+                    <p className="text-black/80 font-medium mb-8 text-lg">Get free tips, early access to drops, and exclusive discounts from George himself.</p>
+
+                    <form
                         onSubmit={(e) => { e.preventDefault(); handleSubscribe(e.target.email.value); e.target.reset(); }}
                         className="flex flex-col md:flex-row gap-4 max-w-lg mx-auto"
                     >
-                        <input 
+                        <input
                         name="email"
-                        type="email" 
-                        placeholder="Enter your email" 
+                        type="email"
+                        placeholder="Enter your email"
                         className="flex-1 px-6 py-4 rounded-xl border-2 border-black focus:outline-none focus:ring-4 focus:ring-black/20 font-medium"
                         required
                         />

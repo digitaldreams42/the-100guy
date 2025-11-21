@@ -86,8 +86,10 @@ export async function POST(request) {
         const dataToSave = {
             ...productData,
             price: parseFloat(productData.price),
-            stock: parseInt(productData.stock, 10) || 0,
+            stock: parseInt(productData.stock, 10) || 0, // Inventory management
             salesCount: 0,
+            lowStockThreshold: parseInt(productData.lowStockThreshold, 10) || 5, // For inventory alerts
+            status: productData.status || 'published', // Added status field
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
@@ -118,5 +120,53 @@ export async function POST(request) {
     } catch (error) {
         console.error('API POST Product Error:', error);
         return NextResponse.json({ message: 'Failed to create product.', error: error.message }, { status: 500 });
+    }
+}
+
+// PUT: Update a product
+export async function PUT(request) {
+    try {
+        const body = await request.json();
+        const { id, ...updateData } = body;
+
+        if (!id) {
+            return NextResponse.json({ message: 'Product ID is required.' }, { status: 400 });
+        }
+
+        const productRef = getProductsCollection().doc(id);
+        const productSnap = await productRef.get();
+
+        if (!productSnap.exists) {
+            return NextResponse.json({ message: 'Product not found.' }, { status: 404 });
+        }
+
+        // Prepare update data
+        const updateObj = {};
+        for (const [key, value] of Object.entries(updateData)) {
+            if (['name', 'description', 'price', 'category', 'stock', 'lowStockThreshold', 'status', 'features'].includes(key)) {
+                if (key === 'price') {
+                    updateObj[key] = parseFloat(value);
+                } else if (key === 'stock') {
+                    updateObj[key] = parseInt(value, 10); // Inventory management
+                } else if (key === 'lowStockThreshold') {
+                    updateObj[key] = parseInt(value, 10);
+                } else {
+                    updateObj[key] = value;
+                }
+            }
+        }
+
+        updateObj.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+
+        await productRef.update(updateObj);
+
+        // Fetch updated product to return
+        const updatedSnap = await productRef.get();
+        const updatedProduct = { id: updatedSnap.id, ...updatedSnap.data() };
+
+        return NextResponse.json(updatedProduct, { status: 200 });
+    } catch (error) {
+        console.error('API PUT Product Error:', error);
+        return NextResponse.json({ message: 'Failed to update product.', error: error.message }, { status: 500 });
     }
 }
