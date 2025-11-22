@@ -11,17 +11,7 @@ export default function BlogManagement() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPosts, setSelectedPosts] = useState([]);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [notification, setNotification] = useState(null);
-    const [newPost, setNewPost] = useState({
-        title: '',
-        content: '',
-        excerpt: '',
-        author: '',
-        status: 'draft',
-        coverImage: '',
-        tags: ''
-    });
+
 
     // Fetch blog posts from API
     useEffect(() => {
@@ -35,7 +25,7 @@ export default function BlogManagement() {
                     throw new Error('Failed to fetch blog posts');
                 }
             } catch (error) {
-                showNotification('Error loading blog posts: ' + error.message, 'error');
+                console.error('Error loading blog posts: ' + error.message, 'error');
             } finally {
                 setLoading(false);
             }
@@ -44,64 +34,7 @@ export default function BlogManagement() {
         fetchPosts();
     }, []);
 
-    const showNotification = (message, type = 'success') => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 3000);
-    };
 
-    const filteredPosts = posts.filter(post =>
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.author.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const handleSelectPost = (postId) => {
-        if (selectedPosts.includes(postId)) {
-            setSelectedPosts(selectedPosts.filter(id => id !== postId));
-        } else {
-            setSelectedPosts([...selectedPosts, postId]);
-        }
-    };
-
-    const handleCreatePost = async (e) => {
-        e.preventDefault();
-
-        try {
-            const postData = {
-                ...newPost,
-                tags: newPost.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-            };
-
-            const response = await fetch('/api/blog', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(postData)
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                setPosts([result, ...posts]);
-                setIsModalOpen(false);
-                setNewPost({
-                    title: '',
-                    content: '',
-                    excerpt: '',
-                    author: '',
-                    status: 'draft',
-                    coverImage: '',
-                    tags: ''
-                });
-                showNotification('Blog post created successfully!');
-            } else {
-                throw new Error(result.message || 'Failed to create blog post');
-            }
-        } catch (error) {
-            showNotification('Error creating blog post: ' + error.message, 'error');
-        }
-    };
 
     const handleDeletePost = async (postId) => {
         if (window.confirm('Are you sure you want to delete this blog post?')) {
@@ -115,12 +48,11 @@ export default function BlogManagement() {
                 if (response.ok) {
                     setPosts(posts.filter(post => post.id !== postId));
                     setSelectedPosts(selectedPosts.filter(id => id !== postId));
-                    showNotification('Blog post deleted successfully!');
                 } else {
                     throw new Error(result.message || 'Failed to delete blog post');
                 }
             } catch (error) {
-                showNotification('Error deleting blog post: ' + error.message, 'error');
+                console.error('Error deleting blog post: ' + error.message, 'error');
             }
         }
     };
@@ -135,7 +67,6 @@ export default function BlogManagement() {
 
             setPosts(posts.filter(post => !selectedPosts.includes(post.id)));
             setSelectedPosts([]);
-            showNotification('Selected blog posts deleted successfully!');
         }
     };
 
@@ -144,13 +75,10 @@ export default function BlogManagement() {
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-gray-900">Blog Management</h1>
                 <div className="flex space-x-4">
-                    <button
-                        onClick={() => setIsModalOpen(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-                    >
+                    <Link href="/admin/dashboard/blog/new" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
                         <Plus className="w-4 h-4 mr-2" />
                         New Post
-                    </button>
+                    </Link>
                     {selectedPosts.length > 0 && (
                         <button
                             onClick={handleBulkDelete}
@@ -163,17 +91,7 @@ export default function BlogManagement() {
                 </div>
             </div>
 
-            {/* Notification */}
-            {notification && (
-                <div className={`fixed top-4 right-4 z-50 p-4 rounded-md shadow-lg ${
-                    notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                    <div className="flex items-center">
-                        <AlertCircle className="w-5 h-5 mr-2" />
-                        {notification.message}
-                    </div>
-                </div>
-            )}
+
 
             {/* Search bar */}
             <div className="mb-6">
@@ -202,14 +120,24 @@ export default function BlogManagement() {
                     {/* Posts table */}
                     <div className="bg-white shadow overflow-hidden sm:rounded-md">
                         <ul className="divide-y divide-gray-200">
-                            {filteredPosts.map((post) => (
+                            {posts.filter(post =>
+                                post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                post.author.toLowerCase().includes(searchTerm.toLowerCase())
+                            ).map((post) => (
                                 <li key={post.id} className="hover:bg-gray-50">
                                     <div className="px-6 py-4 flex items-center justify-between">
                                         <div className="flex items-center">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedPosts.includes(post.id)}
-                                                onChange={() => handleSelectPost(post.id)}
+                                                onChange={() => {
+                                                    if (selectedPosts.includes(post.id)) {
+                                                        setSelectedPosts(selectedPosts.filter(id => id !== post.id));
+                                                    } else {
+                                                        setSelectedPosts([...selectedPosts, post.id]);
+                                                    }
+                                                }}
                                                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                             />
                                             <div className="ml-4">
@@ -255,7 +183,11 @@ export default function BlogManagement() {
                             ))}
                         </ul>
 
-                        {filteredPosts.length === 0 && !loading && (
+                        {posts.filter(post =>
+                                post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                post.excerpt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                post.author.toLowerCase().includes(searchTerm.toLowerCase())
+                            ).length === 0 && !loading && (
                             <div className="text-center py-12">
                                 <p className="text-gray-500">No blog posts found</p>
                             </div>
@@ -264,149 +196,7 @@ export default function BlogManagement() {
                 </>
             )}
 
-            {/* Add Post Modal */}
-            {isModalOpen && (
-                <div className="fixed z-10 inset-0 overflow-y-auto">
-                    <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-                            <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-                        </div>
 
-                        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-                        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-                            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                                <div className="sm:flex sm:items-start">
-                                    <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                        <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                                            Create New Blog Post
-                                        </h3>
-                                        <form onSubmit={handleCreatePost}>
-                                            <div className="grid grid-cols-1 gap-6">
-                                                <div>
-                                                    <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                                                        Title
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        id="title"
-                                                        value={newPost.title}
-                                                        onChange={(e) => setNewPost({...newPost, title: e.target.value})}
-                                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700">
-                                                        Excerpt
-                                                    </label>
-                                                    <textarea
-                                                        id="excerpt"
-                                                        rows={2}
-                                                        value={newPost.excerpt}
-                                                        onChange={(e) => setNewPost({...newPost, excerpt: e.target.value})}
-                                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label htmlFor="content" className="block text-sm font-medium text-gray-700">
-                                                        Content
-                                                    </label>
-                                                    <textarea
-                                                        id="content"
-                                                        rows={6}
-                                                        value={newPost.content}
-                                                        onChange={(e) => setNewPost({...newPost, content: e.target.value})}
-                                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label htmlFor="author" className="block text-sm font-medium text-gray-700">
-                                                            Author
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="author"
-                                                            value={newPost.author}
-                                                            onChange={(e) => setNewPost({...newPost, author: e.target.value})}
-                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label htmlFor="coverImage" className="block text-sm font-medium text-gray-700">
-                                                            Cover Image URL
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="coverImage"
-                                                            value={newPost.coverImage}
-                                                            onChange={(e) => setNewPost({...newPost, coverImage: e.target.value})}
-                                                            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
-                                                        Tags (comma separated)
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        id="tags"
-                                                        value={newPost.tags}
-                                                        onChange={(e) => setNewPost({...newPost, tags: e.target.value})}
-                                                        placeholder="e.g., business, startup, marketing"
-                                                        className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                                    />
-                                                </div>
-
-                                                <div>
-                                                    <label htmlFor="status" className="block text-sm font-medium text-gray-700">
-                                                        Status
-                                                    </label>
-                                                    <select
-                                                        id="status"
-                                                        value={newPost.status}
-                                                        onChange={(e) => setNewPost({...newPost, status: e.target.value})}
-                                                        className="mt-1 block w-full bg-white border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                                    >
-                                                        <option value="draft">Draft</option>
-                                                        <option value="published">Published</option>
-                                                        <option value="archived">Archived</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                                                <button
-                                                    type="submit"
-                                                    className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:col-start-2 sm:text-sm"
-                                                >
-                                                    Publish Post
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsModalOpen(false)}
-                                                    className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:col-start-1 sm:text-sm"
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
