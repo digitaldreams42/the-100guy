@@ -3,6 +3,16 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '../../../../lib/firebase-admin';
 import admin from 'firebase-admin';
 import cloudinary from '../../../../lib/cloudinary';
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Helper function to upload files to Cloudinary
 async function uploadFileToCloudinary(file, folder, resourceType = 'image') {
@@ -62,6 +72,11 @@ export async function GET(request, { params }) {
 
 // PUT: Update an existing product
 export async function PUT(request, { params }) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const { id } = params;
         const formData = await request.formData();
@@ -132,6 +147,11 @@ export async function PUT(request, { params }) {
 
 // DELETE: Delete a product
 export async function DELETE(request, { params }) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const { id } = params;
         const productRef = getProductDoc(id);

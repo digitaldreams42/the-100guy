@@ -2,6 +2,16 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
 import { calculateStoreAnalytics, getPeriodAnalytics, formatAnalyticsForDisplay } from '../../../lib/analytics-service';
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Reusable collection references
 const getSalesCollection = () => {
@@ -20,6 +30,11 @@ const getSubscribersCollection = () => {
 };
 
 export async function GET(request) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         // Fetch all necessary data from Firestore
         const [salesSnapshot, productsSnapshot, subscribersSnapshot] = await Promise.all([

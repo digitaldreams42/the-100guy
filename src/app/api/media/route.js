@@ -3,6 +3,16 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
 import cloudinary from '../../../lib/cloudinary';
 import admin from 'firebase-admin';
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Reference to media collection
 const getMediaCollection = () => {
@@ -32,6 +42,11 @@ async function uploadToCloudinary(fileBuffer, folder, resourceType = 'image') {
 
 // GET: Fetch all media items
 export async function GET(request) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const { searchParams } = new URL(request.url);
         const type = searchParams.get('type'); // Filter by type: image, video, document, etc.
@@ -74,6 +89,11 @@ export async function GET(request) {
 
 // POST: Upload a new media item
 export async function POST(request) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const formData = await request.formData();
         const file = formData.get('file');
@@ -126,6 +146,11 @@ export async function POST(request) {
 
 // DELETE: Delete a media item
 export async function DELETE(request) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');

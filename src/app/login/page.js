@@ -30,10 +30,8 @@ export default function LoginPage() {
 
         const result = await loginCustomer(formData.email, formData.password);
 
-        if (result.success) {
-            router.push('/profile');
-        } else {
-            setError(result.error?.message || 'Login failed. Please try again.');
+        if (!result.success) {
+            setError(result.error || 'Login failed. Please try again.');
         }
     };
 

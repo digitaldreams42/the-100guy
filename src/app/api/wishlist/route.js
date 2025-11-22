@@ -2,6 +2,16 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
 import admin from 'firebase-admin'; // Import admin for FieldValue.serverTimestamp()
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Reusable collection references
 const getWishlistCollection = (userId) => {
@@ -12,12 +22,11 @@ const getWishlistCollection = (userId) => {
 // GET: Fetch user's wishlist
 export async function GET(request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('userId');
-
-        if (!userId) {
-            return NextResponse.json({ message: 'User ID is required.' }, { status: 400 });
+        const session = await getIronSession(cookies(), sessionOptions);
+        if (!session.user || !session.user.uid) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
+        const userId = session.user.uid;
 
         const wishlistRef = getWishlistCollection(userId);
         const snapshot = await wishlistRef.get();
@@ -50,10 +59,16 @@ export async function GET(request) {
 // POST: Add item to user's wishlist
 export async function POST(request) {
     try {
-        const { userId, productId, productData } = await request.json();
+        const session = await getIronSession(cookies(), sessionOptions);
+        if (!session.user || !session.user.uid) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+        }
+        const userId = session.user.uid;
 
-        if (!userId || !productId || !productData) {
-            return NextResponse.json({ message: 'User ID, Product ID, and Product Data are required.' }, { status: 400 });
+        const { productId, productData } = await request.json();
+
+        if (!productId || !productData) {
+            return NextResponse.json({ message: 'Product ID and Product Data are required.' }, { status: 400 });
         }
 
         // Check if item already exists in wishlist

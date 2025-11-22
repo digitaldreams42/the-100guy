@@ -2,10 +2,17 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
 import admin from 'firebase-admin'; // Import admin for FieldValue.serverTimestamp()
-
-// For email functionality in a server component, we'll import the service
-// but only use it in server-side code
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
 import nodemailer from 'nodemailer';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Create email transporter
 const createEmailTransporter = () => {
@@ -49,7 +56,7 @@ const sendOrderConfirmation = async (customerEmail, orderDetails) => {
                         <h3>Order Details:</h3>
                         <p><strong>Order ID:</strong> ${orderDetails.id}</p>
                         <p><strong>Product:</strong> ${orderDetails.productTitle}</p>
-                        <p><strong>Price:</strong> $${orderDetails.amount?.toFixed(2)}</p>
+                        <p><strong>Price:</strong> ${orderDetails.amount?.toFixed(2)}</p>
                         <p><strong>Date:</strong> ${new Date(orderDetails.createdAt).toLocaleString()}</p>
                     </div>
 
@@ -94,6 +101,10 @@ export async function GET(request) {
             // Filter sales by customer email for user-specific orders
             query = query.where('customerEmail', '==', customerEmail).orderBy('createdAt', 'desc');
         } else {
+            const session = await getIronSession(cookies(), sessionOptions);
+            if (!session.user || !session.user.isAdmin) {
+                return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+            }
             // Order by createdAt for all sales
             query = query.orderBy('createdAt', 'desc');
         }

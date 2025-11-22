@@ -1,6 +1,16 @@
 // app/api/wishlist/[id]/route.js
 import { NextResponse } from 'next/server';
 import { adminDb } from '../../../../lib/firebase-admin';
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Reusable collection reference
 const getWishlistCollection = (userId) => {
@@ -11,13 +21,13 @@ const getWishlistCollection = (userId) => {
 // DELETE: Remove item from user's wishlist
 export async function DELETE(request, { params }) {
     try {
-        const productId = params.id;
-        const requestBody = await request.json();
-        const userId = requestBody.userId;
-
-        if (!userId || !productId) {
-            return NextResponse.json({ message: 'User ID and Product ID are required.' }, { status: 400 });
+        const session = await getIronSession(cookies(), sessionOptions);
+        if (!session.user || !session.user.uid) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
+        const userId = session.user.uid;
+
+        const productId = params.id;
 
         // Find the document with the specific product ID
         const wishlistRef = getWishlistCollection(userId);

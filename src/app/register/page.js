@@ -18,7 +18,6 @@ export default function RegisterPage() {
         displayName: ''
     });
     const [error, setError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
 
     const handleChange = (e) => {
         setFormData({
@@ -47,13 +46,8 @@ export default function RegisterPage() {
             formData.displayName || formData.email.split('@')[0]
         );
 
-        if (result.success) {
-            setSuccessMessage('Registration successful! Please check your email to verify your account.');
-            setTimeout(() => {
-                router.push('/login');
-            }, 2000);
-        } else {
-            setError(result.error?.message || 'Registration failed. Please try again.');
+        if (!result.success) {
+            setError(result.error || 'Registration failed. Please try again.');
         }
     };
 
@@ -73,12 +67,6 @@ export default function RegisterPage() {
                 {error && (
                     <div className="rounded-md bg-red-50 p-4 text-sm text-red-700 border border-red-200">
                         {error}
-                    </div>
-                )}
-
-                {successMessage && (
-                    <div className="rounded-md bg-green-50 p-4 text-sm text-green-700 border border-green-200">
-                        {successMessage}
                     </div>
                 )}
 

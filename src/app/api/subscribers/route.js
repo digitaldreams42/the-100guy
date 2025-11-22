@@ -2,9 +2,17 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
 import admin from 'firebase-admin';
-
-// For email functionality in a server component
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
 import nodemailer from 'nodemailer';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Create email transporter
 const createEmailTransporter = () => {
@@ -69,6 +77,11 @@ const getSubscribersCollection = () => {
 
 // GET: Fetch all subscribers
 export async function GET() {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const snapshot = await getSubscribersCollection().get();
         if (snapshot.empty) {

@@ -9,12 +9,11 @@ import Button from '../../components/ui/Button';
 import Link from 'next/link';
 
 export default function ProfilePage() {
-    const { user, isLoading, logoutCustomer } = useAuth();
+    const { user, isLoading, logout } = useAuth();
     const { userOrders, refetchUserOrders, wishlist } = useStore();
     const [editMode, setEditMode] = useState(false);
     const [displayName, setDisplayName] = useState('');
     const [email, setEmail] = useState('');
-    const [showVerificationMessage, setShowVerificationMessage] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -27,12 +26,6 @@ export default function ProfilePage() {
         // In a real implementation, this would update the user's profile in Firebase
         // For now, just switch back to view mode
         setEditMode(false);
-    };
-
-    const handleResendVerification = async () => {
-        // In a real implementation, this would resend the verification email
-        setShowVerificationMessage(true);
-        setTimeout(() => setShowVerificationMessage(false), 3000);
     };
 
     if (isLoading) {
@@ -72,7 +65,7 @@ export default function ProfilePage() {
                         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 sticky top-24">
                             <div className="flex flex-col items-center mb-6">
                                 <div className="w-24 h-24 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center mb-4">
-                                    <User className="text-white w-12 h-12" />
+                                    <User className="h-12 w-12 text-white" />
                                 </div>
                                 <h2 className="text-xl font-bold text-gray-900">
                                     {editMode ? (
@@ -87,21 +80,12 @@ export default function ProfilePage() {
                                     )}
                                 </h2>
                                 <p className="text-gray-500 text-sm">{user.email}</p>
-                                {!user.emailVerified && (
-                                    <div className="mt-2 px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full flex items-center">
-                                        <span>Email not verified</span>
-                                    </div>
-                                )}
                             </div>
 
                             <div className="space-y-4">
                                 <div className="flex items-center text-gray-600">
                                     <Mail className="w-4 h-4 mr-3" />
                                     <span className="text-sm">{user.email}</span>
-                                </div>
-                                <div className="flex items-center text-gray-600">
-                                    <Calendar className="w-4 h-4 mr-3" />
-                                    <span className="text-sm">Joined: {user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'Unknown'}</span>
                                 </div>
                             </div>
 
@@ -133,30 +117,14 @@ export default function ProfilePage() {
                                     </Button>
                                 )}
 
-                                {!user.emailVerified && (
-                                    <Button
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={handleResendVerification}
-                                    >
-                                        Resend Verification
-                                    </Button>
-                                )}
-
                                 <Button
                                     variant="outline"
                                     className="w-full text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
-                                    onClick={logoutCustomer}
+                                    onClick={logout}
                                 >
                                     Logout
                                 </Button>
                             </div>
-
-                            {showVerificationMessage && (
-                                <div className="mt-4 p-3 bg-green-100 text-green-700 text-sm rounded-lg">
-                                    Verification email sent! Check your inbox.
-                                </div>
-                            )}
                         </div>
                     </div>
 

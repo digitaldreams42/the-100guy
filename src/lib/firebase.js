@@ -2,8 +2,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { 
     getAuth, 
-    signInWithCustomToken, 
-    signInAnonymously,
 } from 'firebase/auth';
 import { 
     getFirestore, 
@@ -26,9 +24,6 @@ const firebaseConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-const appId = firebaseConfig.appId || 'george-store';
-
 // --- Initialization ---
 let app;
 if (!getApps().length) {
@@ -42,22 +37,6 @@ const db = getFirestore(app);
 const storageService = getStorage(app);
 
 // Keep the storage object for compatibility, but add the real storage service
-const storage = { appId, db, serverTimestamp, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, storage: storageService };
+const storage = { appId: firebaseConfig.appId, db, serverTimestamp, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, storage: storageService };
 
-/**
- * Performs initial authentication for the Canvas environment if a token is present,
- * otherwise signs in anonymously. This is useful for local dev and testing.
- */
-async function authenticateUser() {
-    try {
-        if (initialAuthToken) {
-            await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-            await signInAnonymously(auth);
-        }
-    } catch (error) {
-        console.error("Firebase Auth initialization failed:", error);
-    }
-}
-
-export { app, auth, db, storage, authenticateUser, serverTimestamp };
+export { app, auth, db, storage, serverTimestamp };

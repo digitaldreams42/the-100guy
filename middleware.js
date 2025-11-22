@@ -1,39 +1,27 @@
-// middleware.js
-export function middleware(request) {
-    // Add security headers to all responses
-    const response = Response.next({
-        request: {
-            headers: request.headers,
-        },
-    });
+import { NextResponse } from 'next/server';
+import { getIronSession } from 'iron-session/edge';
 
-    // Set security headers
-    response.headers.set('X-Frame-Options', 'DENY');
-    response.headers.set('X-Content-Type-Options', 'nosniff');
-    response.headers.set('X-XSS-Protection', '1; mode=block');
-    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+export async function middleware(req) {
+  const res = NextResponse.next();
+  const session = await getIronSession(req, res, {
+    cookieName: 'gstore-session',
+    password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+    cookieOptions: {
+      secure: process.env.NODE_ENV === 'production',
+    },
+  });
 
-    return response;
+  const { user } = session;
+
+  if (req.nextUrl.pathname.startsWith('/admin/dashboard')) {
+    if (!user || !user.isAdmin) {
+      return NextResponse.redirect(new URL('/admin/login', req.url));
+    }
+  }
+
+  return res;
 }
 
-// Apply middleware to all routes except static assets
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         */
-        {
-            source: '/((?!api|_next/static|_next/image|favicon.ico).*)',
-            missing: [
-                { type: 'header', key: 'next-router-prefetch' },
-                { type: 'header', key: 'purpose', value: 'prefetch' }
-            ]
-        }
-    ]
-}
+  matcher: ['/admin/dashboard/:path*'],
+};

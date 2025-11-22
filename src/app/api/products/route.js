@@ -3,6 +3,16 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
 import admin from 'firebase-admin';
 import cloudinary from '../../../lib/cloudinary';
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Reusable collection reference
 const getProductsCollection = () => {
@@ -50,6 +60,11 @@ export async function GET() {
 
 // POST: Create a new product
 export async function POST(request) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
         const formData = await request.formData();
 
@@ -125,6 +140,11 @@ export async function POST(request) {
 
 // PUT: Update a product
 export async function PUT(request) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+    
     try {
         const body = await request.json();
         const { id, ...updateData } = body;
@@ -165,8 +185,5 @@ export async function PUT(request) {
         const updatedProduct = { id: updatedSnap.id, ...updatedSnap.data() };
 
         return NextResponse.json(updatedProduct, { status: 200 });
-    } catch (error) {
-        console.error('API PUT Product Error:', error);
-        return NextResponse.json({ message: 'Failed to update product.', error: error.message }, { status: 500 });
     }
 }

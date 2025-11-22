@@ -1,6 +1,16 @@
 // app/api/subscribers/[id]/route.js
 import { NextResponse } from 'next/server';
 import { adminDb } from '../../../../lib/firebase-admin';
+import { getIronSession } from 'iron-session';
+import { cookies } from 'next/headers';
+
+const sessionOptions = {
+  cookieName: 'gstore-session',
+  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
+  cookieOptions: {
+    secure: process.env.NODE_ENV === 'production',
+  },
+};
 
 // Reusable document reference
 const getSubscriberDoc = (id) => {
@@ -10,6 +20,11 @@ const getSubscriberDoc = (id) => {
 
 // DELETE: Delete a subscriber
 export async function DELETE(request, { params }) {
+    const session = await getIronSession(cookies(), sessionOptions);
+    if (!session.user || !session.user.isAdmin) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = params;
     try {
         await getSubscriberDoc(id).delete();

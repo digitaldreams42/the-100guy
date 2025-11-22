@@ -19,7 +19,7 @@ import { useState } from 'react';
 const NavbarComponent = () => {
     const pathname = usePathname();
     const { setIsCartOpen, cart } = useStore();
-    const { user, isUserAdmin, logoutCustomer } = useAuth();
+    const { user, logout } = useAuth(); // Changed logoutCustomer to logout
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const NavButton = ({ href, children }) => {
@@ -110,7 +110,7 @@ const NavbarComponent = () => {
                             <NavButton href="/about">About</NavButton>
                             
 
-                            {user && !isUserAdmin ? (
+                            {user && !user.isAdmin ? ( // Changed isUserAdmin to user?.isAdmin
                                 // Customer is logged in
                                 <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100" role="group" aria-label="User menu">
                                     <Link href="/profile" className="text-sm font-medium text-gray-600 hover:text-yellow-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1" aria-label="Go to profile">
@@ -118,7 +118,7 @@ const NavbarComponent = () => {
                                     </Link>
                                     <button
                                         onClick={() => {
-                                            logoutCustomer();
+                                            logout(); // Changed logoutCustomer to logout
                                             setMobileMenuOpen(false);
                                         }}
                                         className="text-left text-sm font-medium text-gray-400 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1"
@@ -127,7 +127,7 @@ const NavbarComponent = () => {
                                         Logout
                                     </button>
                                 </div>
-                            ) : !isUserAdmin && (
+                            ) : !user?.isAdmin && ( // Changed isUserAdmin to user?.isAdmin
                                 // Customer is not logged in
                                 <div className="flex flex-col space-y-2 pt-2 border-t border-gray-100" role="group" aria-label="Authentication menu">
                                     <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-yellow-500 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1" aria-label="Login">
@@ -139,7 +139,7 @@ const NavbarComponent = () => {
                                 </div>
                             )}
 
-                            {isUserAdmin && (
+                            {user?.isAdmin && ( // Changed isUserAdmin to user?.isAdmin
                                 <div className="pt-2 border-t border-gray-100" role="group" aria-label="Admin menu">
                                     <Link href="/admin/dashboard" className="text-xs font-bold text-gray-400 hover:text-gray-900 uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-1" aria-label="Go to admin dashboard">
                                         Admin
