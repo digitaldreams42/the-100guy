@@ -185,8 +185,8 @@ export async function PUT(request) {
         const updatedProduct = { id: updatedSnap.id, ...updatedSnap.data() };
 
         return NextResponse.json(updatedProduct, { status: 200 });
-    } catch (error) { // Re-adding the catch block
+        } catch (error) { // Re-adding the catch block
         console.error('API PUT Product Error:', error);
         return NextResponse.json({ message: 'Failed to update product.', error: error.message }, { status: 500 });
     }
-}
+    }
