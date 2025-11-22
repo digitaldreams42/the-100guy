@@ -2,16 +2,6 @@
 import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { adminDb } from '../../../lib/firebase-admin'; // Use the server-side admin instance
-import { getIronSession } from 'iron-session';
-import { cookies } from 'next/headers';
-
-const sessionOptions = {
-  cookieName: 'gstore-session',
-  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
-  cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
-  },
-};
 
 // Helper to get all subscribers from Firestore using Admin SDK
 async function getAllSubscribers() {
@@ -30,11 +20,6 @@ async function getAllSubscribers() {
 }
 
 export async function POST(request) {
-    const session = await getIronSession(cookies(), sessionOptions);
-    if (!session.user || !session.user.isAdmin) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
     try {
         const { subject, htmlContent } = await request.json();
 

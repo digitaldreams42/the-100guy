@@ -1,45 +1,50 @@
 // app/admin/login/page.js
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Button from '../../../components/ui/Button';
 import { User, Loader2 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
+
 export default function AdminLoginPage() {
+    const { loginAdmin, isUserAdmin, isLoading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [localLoading, setLocalLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
 
-    const handleLogin = async (e) => {
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+
+    useEffect(() => {
+        if (isUserAdmin) {
+            router.replace('/admin/dashboard');
+        }
+    }, [isUserAdmin, router]);
+
+    const handleLogin = (e) => {
         e.preventDefault();
         setError('');
         setLocalLoading(true);
 
-        try {
-            const res = await fetch('/api/admin/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            });
+        // The logic is now handled in AuthContext, making this a synchronous call
+        const result = loginAdmin(email, password);
+        
+        setLocalLoading(false);
 
-            const data = await res.json();
-
-            if (data.success) {
-                router.replace('/admin/dashboard');
-            } else {
-                setError(data.message || 'Login failed. Please check your credentials.');
-            }
-        } catch (error) {
-            setError('An unexpected error occurred. Please try again.');
-        } finally {
-            setLocalLoading(false);
+        if (!result.success) {
+            setError(result.message || 'Login failed. Please check your credentials.');
+        } else {
+            router.replace('/admin/dashboard');
         }
     };
+
+    if (isLoading || isUserAdmin) {
+        return <div className="h-screen flex items-center justify-center text-lg text-gray-500">Redirecting...</div>;
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">

@@ -3,16 +3,6 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
 import admin from 'firebase-admin';
 import cloudinary from '../../../lib/cloudinary';
-import { getIronSession } from 'iron-session';
-import { cookies } from 'next/headers';
-
-const sessionOptions = {
-  cookieName: 'gstore-session',
-  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
-  cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
-  },
-};
 
 // Reusable collection reference
 const getProductsCollection = () => {
@@ -60,11 +50,6 @@ export async function GET() {
 
 // POST: Create a new product
 export async function POST(request) {
-    const session = await getIronSession(cookies(), sessionOptions);
-    if (!session.user || !session.user.isAdmin) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-
     try {
         const formData = await request.formData();
 
@@ -101,10 +86,8 @@ export async function POST(request) {
         const dataToSave = {
             ...productData,
             price: parseFloat(productData.price),
-            stock: parseInt(productData.stock, 10) || 0, // Inventory management
+            stock: parseInt(productData.stock, 10) || 0,
             salesCount: 0,
-            lowStockThreshold: parseInt(productData.lowStockThreshold, 10) || 5, // For inventory alerts
-            status: productData.status || 'published', // Added status field
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
@@ -137,56 +120,3 @@ export async function POST(request) {
         return NextResponse.json({ message: 'Failed to create product.', error: error.message }, { status: 500 });
     }
 }
-
-// PUT: Update a product
-export async function PUT(request) {
-    const session = await getIronSession(cookies(), sessionOptions);
-    if (!session.user || !session.user.isAdmin) {
-        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-    }
-    
-    try {
-        const body = await request.json();
-        const { id, ...updateData } = body;
-
-        if (!id) {
-            return NextResponse.json({ message: 'Product ID is required.' }, { status: 400 });
-        }
-
-        const productRef = getProductsCollection().doc(id);
-        const productSnap = await productRef.get();
-
-        if (!productSnap.exists) {
-            return NextResponse.json({ message: 'Product not found.' }, { status: 404 });
-        }
-
-        // Prepare update data
-        const updateObj = {};
-        for (const [key, value] of Object.entries(updateData)) {
-            if (['name', 'description', 'price', 'category', 'stock', 'lowStockThreshold', 'status', 'features'].includes(key)) {
-                if (key === 'price') {
-                    updateObj[key] = parseFloat(value);
-                } else if (key === 'stock') {
-                    updateObj[key] = parseInt(value, 10); // Inventory management
-                } else if (key === 'lowStockThreshold') {
-                    updateObj[key] = parseInt(value, 10);
-                } else {
-                    updateObj[key] = value;
-                }
-            }
-        }
-
-        updateObj.updatedAt = admin.firestore.FieldValue.serverTimestamp();
-
-        await productRef.update(updateObj);
-
-        // Fetch updated product to return
-        const updatedSnap = await productRef.get();
-        const updatedProduct = { id: updatedSnap.id, ...updatedSnap.data() };
-
-        return NextResponse.json(updatedProduct, { status: 200 });
-        } catch (error) { // Re-adding the catch block
-        console.error('API PUT Product Error:', error);
-        return NextResponse.json({ message: 'Failed to update product.', error: error.message }, { status: 500 });
-    }
-    }

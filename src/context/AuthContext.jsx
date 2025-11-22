@@ -2,13 +2,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import {
-    signInWithEmailAndPassword,
-    signOut,
+import { 
+    onAuthStateChanged, 
+    signInWithEmailAndPassword, 
+    signOut 
 } from 'firebase/auth';
-import { auth } from '../lib/firebase';
-import { useRouter } from 'next/navigation';
-
+import { auth, authenticateUser } from '../lib/firebase';
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
@@ -16,95 +15,82 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
+    const [isAdmin, setIsAdmin] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        try {
+            return localStorage.getItem('gstoreIsAdmin') === 'true';
+        } catch (error) {
+            console.error("Error reading admin status from localStorage", error);
+            return false;
+        }
+    });
+
+    // This is now the source of truth for admin status
+    const isUserAdmin = isAdmin;
 
     useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const res = await fetch('/api/user');
-                const data = await res.json();
-                setUser(data);
-            } catch (error) {
-                console.error('Failed to fetch user', error);
-            } finally {
-                setIsLoading(false);
+        // If we're logged in as a mock admin, we can set a mock user and skip Firebase.
+        if (isAdmin) {
+            if (!user) { // Only set mock user if not already set (e.g., on initial load)
+                 setUser({ email: process.env.NEXT_PUBLIC_ADMIN_EMAIL, uid: 'admin-mock-uid' });
             }
-        };
-
-        fetchUser();
-    }, []);
-
-    const registerCustomer = async (email, password, displayName) => {
-        setIsLoading(true);
-        try {
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password, displayName }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                setUser(data);
-                router.push('/profile');
-            }
-            return data;
-        } catch (error) {
-            console.error('Registration failed', error);
-            return { success: false, error: error.message };
-        } finally {
             setIsLoading(false);
+            return;
         }
-    };
 
-    const loginCustomer = async (email, password) => {
-        setIsLoading(true);
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const token = await userCredential.user.getIdToken();
+        // For regular users, we still want to use Firebase anonymous auth.
+        authenticateUser(); 
 
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ token }),
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                setUser(data);
-                router.push('/profile');
+        const unsubscribe = onAuthStateChanged(auth, (u) => {
+            if (!isAdmin) {
+                setUser(u);
             }
-            return data;
-        } catch (error) {
-            console.error('Login failed', error);
-            return { success: false, error: error.message };
-        } finally {
             setIsLoading(false);
+        });
+
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
+    }, [isAdmin]); // Rerun this effect if the admin status changes.
+
+    const loginAdmin = (email, password) => {
+        setIsLoading(true);
+        if (
+            email === process.env.NEXT_PUBLIC_ADMIN_EMAIL &&
+            password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD
+        ) {
+            try {
+                localStorage.setItem('gstoreIsAdmin', 'true');
+            } catch (error) {
+                console.error("Failed to save admin status to localStorage", error);
+            }
+            setIsAdmin(true);
+            // The useEffect will handle setting the user and loading state
+            return { success: true };
+        } else {
+            setIsLoading(false);
+            return { success: false, message: 'Invalid Credentials. Please use the admin credentials provided in the .env file.' };
         }
     };
 
     const logout = async () => {
-        setIsLoading(true);
-        try {
-            await signOut(auth);
-            await fetch('/api/logout', { method: 'POST' });
+        if (isAdmin) {
+            try {
+                localStorage.removeItem('gstoreIsAdmin');
+            } catch (error) {
+                console.error("Failed to remove admin status from localStorage", error);
+            }
             setUser(null);
-            router.push('/');
-        } catch (error) {
-            console.error('Logout failed', error);
-        } finally {
-            setIsLoading(false);
+            setIsAdmin(false);
+        } else if (user) {
+            await signOut(auth);
         }
     };
 
     const value = {
         user,
         isLoading,
-        registerCustomer,
-        loginCustomer,
+        isUserAdmin,
+        loginAdmin,
         logout,
     };
 
