@@ -1,17 +1,8 @@
-import { getIronSession } from 'iron-session';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-
-const sessionOptions = {
-  cookieName: 'gstore-session',
-  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
-  cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
-  },
-};
+import { getSession } from '../../../../lib/session';
 
 export async function POST(request) {
-  const session = await getIronSession(cookies(), sessionOptions);
+  const session = await getSession();
   const { email, password } = await request.json();
 
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;

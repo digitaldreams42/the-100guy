@@ -1,16 +1,7 @@
 // app/api/blog/route.js
 import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
-import { getIronSession } from 'iron-session';
-import { cookies } from 'next/headers';
-
-const sessionOptions = {
-  cookieName: 'gstore-session',
-  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
-  cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
-  },
-};
+import { getSession } from '../../../lib/session';
 
 // Reusable collection reference for blog posts
 const getBlogCollection = () => {
@@ -20,7 +11,7 @@ const getBlogCollection = () => {
 
 // GET: Fetch all blog posts
 export async function GET() {
-    const session = await getIronSession(cookies(), sessionOptions);
+    const session = await getSession();
     if (!session.user || !session.user.isAdmin) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -40,7 +31,7 @@ export async function GET() {
 
 // POST: Create a new blog post
 export async function POST(request) {
-    const session = await getIronSession(cookies(), sessionOptions);
+    const session = await getSession();
     if (!session.user || !session.user.isAdmin) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }

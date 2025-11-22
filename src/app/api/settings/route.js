@@ -1,20 +1,11 @@
 // app/api/settings/route.js
 import { NextResponse } from 'next/server';
 import { adminDb } from '../../../lib/firebase-admin';
-import { getIronSession } from 'iron-session';
-import { cookies } from 'next/headers';
-
-const sessionOptions = {
-  cookieName: 'gstore-session',
-  password: process.env.SESSION_SECRET || 'complex_password_at_least_32_characters_long',
-  cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
-  },
-};
+import { getSession } from '../../../lib/session';
 
 // Reference to site settings document
 const getSettingsDoc = () => {
-    const docPath = `artifacts/${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}/public/data/settings`;
+    const docPath = `artifacts/${process.env.NEXT_PUBLIC_FIREBASE_APP_ID}/public/data/settings/site_settings`;
     return adminDb.doc(docPath);
 };
 
@@ -62,7 +53,7 @@ export async function GET() {
 
 // PUT: Update site settings
 export async function PUT(request) {
-    const session = await getIronSession(cookies(), sessionOptions);
+    const session = await getSession();
     if (!session.user || !session.user.isAdmin) {
         return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
